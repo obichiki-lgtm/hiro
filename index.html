@@ -26,6 +26,7 @@
         button.add-btn { background-color: var(--primary-color); color: white; border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .task-item { background: #fff; border: 1px solid #eee; border-left: 5px solid var(--primary-color); padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; }
         .task-item span { font-weight: 500; font-size: 0.9rem; flex: 1; padding-right: 10px; }
+        .task-item small { color: #888; margin-left: 5px; font-weight: normal; }
         .btn-done { background-color: var(--success-color); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; min-width: 80px; }
         .btn-delete { background-color: #95a5a6; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; }
         #calendar { margin-top: 10px; background: white; font-size: 0.75rem; }
@@ -96,7 +97,7 @@
                 }
             } catch (error) {
                 console.error("Auth Error:", error);
-                alert("ログインに失敗しました。FirebaseのAuthenticationでGoogleが有効になっているか確認してください。\nエラー内容: " + error.message);
+                alert("ログインに失敗しました。エラー内容: " + error.message);
             }
         }
 
@@ -138,6 +139,7 @@
         function addTask() {
             const input = document.getElementById('taskInput');
             if (input.value === "") return;
+            // 復習の全5回のタイミング設定
             const intervals = [1, 4, 11, 25, 55];
             const reviewDates = intervals.map(days => {
                 const d = new Date(); d.setDate(d.getDate() + days);
@@ -150,7 +152,6 @@
             input.value = ""; displayTasks(); calendar.setOption('events', getCalendarEvents());
         }
 
-        // --- 加筆：自動リスケジュール対応の完了処理 ---
         function completeTask(id) {
             let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
             const taskIndex = tasks.findIndex(t => t.id === id);
@@ -159,25 +160,24 @@
             const todayStr = getTodayStr();
             const today = new Date(todayStr);
 
-            // 1. 本来の予定日（今日リストに表示されていた日付）を探す
+            // 本来予定されていた日付（今日リストにあった日付）を取得
             const scheduledDateStr = tasks[taskIndex].reviews.find(d => d === todayStr) || todayStr;
             const scheduledDate = new Date(scheduledDateStr);
             
-            // 2. 遅延日数を計算 (今日 - 予定日)
+            // 遅延日数を算出
             const diffTime = today.getTime() - scheduledDate.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-            // 3. 遅れがある場合のみ、未来の全予定をスライドさせる
+            // 自動リスケジュール：遅延があれば未来の予定をすべてスライド
             if (diffDays > 0) {
                 tasks[taskIndex].reviews = tasks[taskIndex].reviews.map(dateStr => {
                     const d = new Date(dateStr);
-                    // 全予定に遅延分を加算
                     d.setDate(d.getDate() + diffDays);
                     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 });
             }
 
-            // 4. 今日の分を完了として削除
+            // 今日の分を削除
             tasks[taskIndex].reviews = tasks[taskIndex].reviews.filter(d => d !== todayStr);
 
             // 統計更新
@@ -206,13 +206,26 @@
             const allTasksList = document.getElementById('allTasksList');
             const tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
             const today = getTodayStr();
+            
             todayList.innerHTML = "";
-            tasks.filter(t => t.reviews.includes(today)).forEach(t => {
-                const div = document.createElement('div'); div.className = 'task-item';
-                div.innerHTML = `<span>${t.name}</span> <button class="btn-done" onclick="completeTask(${t.id})">今日実施</button>`;
-                todayList.appendChild(div);
+            tasks.forEach(t => {
+                // そのタスクの復習配列の何番目が今日に当たるかを探す
+                const totalSteps = 5; // 全5回
+                const remainingSteps = t.reviews.length;
+                const currentStep = (totalSteps - remainingSteps) + 1;
+                
+                if (t.reviews.includes(today)) {
+                    const div = document.createElement('div'); 
+                    div.className = 'task-item';
+                    // 名前 + (◯回目) を表示
+                    div.innerHTML = `<span>${t.name} <small>(${currentStep}回目)</small></span> 
+                                     <button class="btn-done" onclick="completeTask(${t.id})">今日実施</button>`;
+                    todayList.appendChild(div);
+                }
             });
+
             if(todayList.innerHTML === "") todayList.innerHTML = '<p style="text-align:center; color:#888; font-size:0.9rem;">今日の復習はありません。</p>';
+            
             allTasksList.innerHTML = "";
             tasks.forEach(t => {
                 const div = document.createElement('div'); div.className = 'task-item'; div.style.borderLeftColor = "#ccc";
@@ -225,9 +238,21 @@
         function getCalendarEvents() {
             const tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
             let events = [];
-            tasks.forEach(task => { task.reviews.forEach(date => {
-                events.push({ title: task.name, start: date, extendedProps: { taskId: task.id }, backgroundColor: '#4a90e2', borderColor: '#4a90e2' });
-            }); });
+            tasks.forEach(task => {
+                // 登録時の全5回を基準に、今の予定が何回目かを逆算して表示
+                const totalSteps = 5;
+                const doneSteps = totalSteps - task.reviews.length;
+                
+                task.reviews.forEach((date, index) => {
+                    events.push({ 
+                        title: `${task.name} (${doneSteps + index + 1}回目)`, 
+                        start: date, 
+                        extendedProps: { taskId: task.id }, 
+                        backgroundColor: '#4a90e2', 
+                        borderColor: '#4a90e2' 
+                    });
+                });
+            });
             return events;
         }
 
