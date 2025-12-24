@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>復習スケジューラー Pro+</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+    <style>
+        :root { --primary-color: #4a90e2; --bg-color: #f4f7f6; --success-color: #2ecc71; --text-color: #333; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
+        .container { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; box-sizing: border-box; position: relative; }
+        .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
+        #loginBtn { background: #eee; border: none; padding: 5px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
+        #loginBtn.logged-in { background: #e3f2fd; color: var(--primary-color); }
+        .status-panel { display: flex; justify-content: space-around; background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 12px; margin-bottom: 15px; }
+        .status-item { flex: 1; text-align: center; }
+        .status-value { display: block; font-size: 1.6rem; font-weight: bold; color: var(--primary-color); }
+        .status-label { font-size: 0.7rem; color: #777; font-weight: bold; }
+        h1 { font-size: 1.3rem; text-align: center; color: var(--primary-color); margin: 10px 0 20px; }
+        h2 { font-size: 1rem; border-left: 5px solid var(--primary-color); padding-left: 10px; margin-top: 25px; margin-bottom: 12px; line-height: 1.2; }
+        .input-area { display: flex; gap: 8px; margin-bottom: 15px; }
+        input[type="text"] { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
+        button.add-btn { background-color: var(--primary-color); color: white; border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .task-item { background: #fff; border: 1px solid #eee; border-left: 5px solid var(--primary-color); padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; }
+        .task-item span { font-weight: 500; font-size: 0.9rem; flex: 1; padding-right: 10px; }
+        .btn-done { background-color: var(--success-color); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; min-width: 80px; }
+        .btn-delete { background-color: #95a5a6; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; }
+        #calendar { margin-top: 10px; background: white; font-size: 0.75rem; }
+        .fc-toolbar-title { font-size: 1.1rem !important; font-weight: bold; border-left: none !important; padding-left: 0 !important; margin: 0 auto !important; text-align: center; }
+        .fc-toolbar-chunk:nth-child(1) { flex: 1; } 
+        .fc-toolbar-chunk:nth-child(3) { flex: 1; display: flex; justify-content: flex-end; gap: 2px; }
+        .fc .fc-button { padding: 4px 6px !important; font-size: 0.75rem !important; }
+        .hint { font-size: 0.7rem; color: #999; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="auth-header"><button id="loginBtn" onclick="handleAuth()">☁️ ログイン</button></div>
+        <h1>復習スケジューラー</h1>
+        <div class="status-panel">
+            <div class="status-item"><span class="status-value" id="streakCount">0</span><span class="status-label">🔥 継続日数</span></div>
+            <div class="status-item"><span class="status-value" id="totalDone">0</span><span class="status-label">🏆 累計完了</span></div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="taskInput" placeholder="勉強した内容を入力してね">
+            <button class="add-btn" onclick="addTask()">登録</button>
+        </div>
+        <h2>今日の復習</h2>
+        <div id="todayList"></div>
+        <h2>カレンダー</h2>
+        <div id="calendar"></div>
+        <p class="hint">予定をタップで名前編集</p>
+        <div style="margin-top: 30px; opacity: 0.7;">
+            <h2>全ログ</h2>
+            <div id="allTasksList"></div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAP51tb-FcRmc1RukwczxfxzUdOkE7yf4g",
+            authDomain: "my-study-app-6a0b6.firebaseapp.com",
+            projectId: "my-study-app-6a0b6",
+            storageBucket: "my-study-app-6a0b6.firebasestorage.app",
+            messagingSenderId: "441129563668",
+            appId: "1:441129563668:web:48cc07f882bff1785e5901",
+            measurementId: "G-WTPBE7LPN1"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        let currentUser = null;
+        let calendar;
+
+        auth.onAuthStateChanged(user => {
+            currentUser = user;
+            const btn = document.getElementById('loginBtn');
+            if (user) {
+                btn.innerText = "✅ 同期中"; btn.classList.add('logged-in'); syncWithCloud();
+            } else {
+                btn.innerText = "☁️ ログイン"; btn.classList.remove('logged-in');
+            }
+        });
+
+        async function handleAuth() {
+            try {
+                if (currentUser) {
+                    if(confirm("ログアウトしますか？")) await auth.signOut();
+                } else {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    // ポップアップがブロックされる場合があるため、失敗時にアラートを出すように強化
+                    await auth.signInWithPopup(provider);
+                }
+            } catch (error) {
+                console.error("Auth Error:", error);
+                alert("ログインに失敗しました。FirebaseのAuthenticationでGoogleが有効になっているか確認してください。\nエラー内容: " + error.message);
+            }
+        }
+
+        // --- 以下、F.htmlベースのロジック（そのまま） ---
+        window.onload = function() { initCalendar(); displayTasks(); updateStats(); };
+        function initCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth', locale: 'ja', aspectRatio: 1.2,
+                headerToolbar: { left: '', center: 'title', right: 'prev,next today' },
+                events: getCalendarEvents(),
+                eventClick: function(info) { editTaskName(info.event.extendedProps.taskId); }
+            });
+            calendar.render();
+        }
+        function saveAllData(tasks, stats) {
+            localStorage.setItem('myTasks', JSON.stringify(tasks));
+            localStorage.setItem('myStats', JSON.stringify(stats));
+            if (currentUser) db.collection("users").doc(currentUser.uid).set({ tasks, stats }, { merge: true });
+        }
+        async function syncWithCloud() {
+            if (!currentUser) return;
+            const doc = await db.collection("users").doc(currentUser.uid).get();
+            if (doc.exists) {
+                const data = doc.data();
+                if (data.tasks) localStorage.setItem('myTasks', JSON.stringify(data.tasks));
+                if (data.stats) localStorage.setItem('myStats', JSON.stringify(data.stats));
+                displayTasks(); updateStats(); calendar.setOption('events', getCalendarEvents());
+            }
+        }
+        function getTodayStr() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            if (input.value === "") return;
+            const intervals = [1, 4, 11, 25, 55];
+            const reviewDates = intervals.map(days => {
+                const d = new Date(); d.setDate(d.getDate() + days);
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            });
+            const task = { id: Date.now(), name: input.value, reviews: reviewDates, createdAt: new Date().toLocaleDateString() };
+            let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
+            tasks.push(task);
+            saveAllData(tasks, JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 });
+            input.value = ""; displayTasks(); calendar.setOption('events', getCalendarEvents());
+        }
+        function completeTask(id) {
+            let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
+            const taskIndex = tasks.findIndex(t => t.id === id);
+            const todayStr = getTodayStr();
+            tasks[taskIndex].reviews = tasks[taskIndex].reviews.filter(d => d !== todayStr);
+            let stats = JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 };
+            stats.total += 1;
+            if (stats.lastDate !== todayStr) {
+                const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                stats.streak = (stats.lastDate === yesterdayStr) ? stats.streak + 1 : 1;
+                stats.lastDate = todayStr;
+            }
+            saveAllData(tasks, stats);
+            displayTasks(); calendar.setOption('events', getCalendarEvents());
+        }
+        function updateStats() {
+            const stats = JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 };
+            document.getElementById('streakCount').innerText = stats.streak;
+            document.getElementById('totalDone').innerText = stats.total;
+        }
+        function displayTasks() {
+            const todayList = document.getElementById('todayList');
+            const allTasksList = document.getElementById('allTasksList');
+            const tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
+            const today = getTodayStr();
+            todayList.innerHTML = "";
+            tasks.filter(t => t.reviews.includes(today)).forEach(t => {
+                const div = document.createElement('div'); div.className = 'task-item';
+                div.innerHTML = `<span>${t.name}</span> <button class="btn-done" onclick="completeTask(${t.id})">今日実施</button>`;
+                todayList.appendChild(div);
+            });
+            if(todayList.innerHTML === "") todayList.innerHTML = '<p style="text-align:center; color:#888; font-size:0.9rem;">今日の復習はありません。</p>';
+            allTasksList.innerHTML = "";
+            tasks.forEach(t => {
+                const div = document.createElement('div'); div.className = 'task-item'; div.style.borderLeftColor = "#ccc";
+                div.innerHTML = `<span>${t.name}</span> <button class="btn-delete" onclick="deleteFullTask(${t.id})">削除</button>`;
+                allTasksList.appendChild(div);
+            });
+            updateStats();
+        }
+        function getCalendarEvents() {
+            const tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
+            let events = [];
+            tasks.forEach(task => { task.reviews.forEach(date => {
+                events.push({ title: task.name, start: date, extendedProps: { taskId: task.id }, backgroundColor: '#4a90e2', borderColor: '#4a90e2' });
+            }); });
+            return events;
+        }
+        function editTaskName(id) {
+            let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
+            const taskIndex = tasks.findIndex(t => t.id === id);
+            if (taskIndex !== -1) {
+                const newName = prompt("名前変更", tasks[taskIndex].name);
+                if (newName) { 
+                    tasks[taskIndex].name = newName; 
+                    saveAllData(tasks, JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 });
+                    displayTasks(); calendar.setOption('events', getCalendarEvents()); 
+                }
+            }
+        }
+        function deleteFullTask(id) {
+            if(!confirm("削除しますか？")) return;
+            let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
+            tasks = tasks.filter(t => t.id !== id);
+            saveAllData(tasks, JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 });
+            displayTasks(); calendar.setOption('events', getCalendarEvents());
+        }
+    </script>
+</body>
+</html>
