@@ -21,6 +21,13 @@
         .status-label { font-size: 0.7rem; color: #777; font-weight: bold; }
         h1 { font-size: 1.3rem; text-align: center; color: var(--primary-color); margin: 10px 0 20px; }
         h2 { font-size: 1rem; border-left: 5px solid var(--primary-color); padding-left: 10px; margin-top: 25px; margin-bottom: 12px; line-height: 1.2; }
+        
+        /* 表示切替ボタンのスタイル */
+        .view-controls { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }
+        .view-btn { background: #fff; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 5px 10px; border-radius: 5px; font-size: 0.75rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .view-btn:hover { background: #f0f7ff; }
+        .view-btn.active { background: var(--primary-color); color: #fff; }
+
         .input-area { display: flex; gap: 8px; margin-bottom: 15px; }
         input[type="text"] { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
         button.add-btn { background-color: var(--primary-color); color: white; border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
@@ -29,7 +36,7 @@
         .task-item small { color: #888; margin-left: 5px; font-weight: normal; }
         .btn-done { background-color: var(--success-color); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; min-width: 80px; }
         .btn-delete { background-color: #95a5a6; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; }
-        #calendar { margin-top: 10px; background: white; font-size: 0.75rem; }
+        #calendar { margin-top: 5px; background: white; font-size: 0.75rem; }
         .fc-toolbar-title { font-size: 1.1rem !important; font-weight: bold; border-left: none !important; padding-left: 0 !important; margin: 0 auto !important; text-align: center; }
         .fc-toolbar-chunk:nth-child(1) { flex: 1; } 
         .fc-toolbar-chunk:nth-child(3) { flex: 1; display: flex; justify-content: flex-end; gap: 2px; }
@@ -51,8 +58,15 @@
         </div>
         <h2>今日の復習</h2>
         <div id="todayList"></div>
+        
         <h2>カレンダー</h2>
+        <div class="view-controls">
+            <button class="view-btn active" id="btnMonth" onclick="changeView('dayGridMonth', 'btnMonth')">1ヶ月</button>
+            <button class="view-btn" id="btnTwoWeeks" onclick="changeView('twoWeeks', 'btnTwoWeeks')">2週間</button>
+            <button class="view-btn" id="btnWeek" onclick="changeView('dayGridWeek', 'btnWeek')">1週間</button>
+        </div>
         <div id="calendar"></div>
+        
         <p class="hint">予定をタップで名前編集</p>
         <div style="margin-top: 30px; opacity: 0.7;">
             <h2>スケジュール一括削除</h2>
@@ -61,7 +75,6 @@
     </div>
 
     <script>
-        // --- 設定・認証ロジック ---
         const firebaseConfig = {
             apiKey: "AIzaSyAP51tb-FcRmc1RukwczxfxzUdOkE7yf4g",
             authDomain: "my-study-app-6a0b6.firebaseapp.com",
@@ -96,7 +109,7 @@
                     await auth.signInWithPopup(provider);
                 }
             } catch (error) {
-                alert("ログインに失敗しました。");
+                alert("ログイン失敗: " + error.message);
             }
         }
 
@@ -105,12 +118,30 @@
         function initCalendar() {
             const calendarEl = document.getElementById('calendar');
             calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth', locale: 'ja', aspectRatio: 1.2,
+                initialView: 'dayGridMonth', 
+                locale: 'ja', 
+                aspectRatio: 1.2,
                 headerToolbar: { left: '', center: 'title', right: 'prev,next today' },
+                // 2週間表示用のカスタムビュー設定
+                views: {
+                    twoWeeks: {
+                        type: 'dayGrid',
+                        duration: { weeks: 2 },
+                        buttonText: '2週間'
+                    }
+                },
                 events: getCalendarEvents(),
                 eventClick: function(info) { editTaskName(info.event.extendedProps.taskId); }
             });
             calendar.render();
+        }
+
+        // 追加機能：カレンダーの表示切替
+        function changeView(viewName, btnId) {
+            calendar.changeView(viewName);
+            // ボタンの活性状態を更新
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(btnId).classList.add('active');
         }
 
         function saveAllData(tasks, stats) {
@@ -135,7 +166,6 @@
             return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         }
 
-        // --- 復習・リスケロジック ---
         function addTask() {
             const input = document.getElementById('taskInput');
             if (input.value === "") return;
@@ -163,7 +193,6 @@
             const diffTime = today.getTime() - scheduledDate.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-            // 自動リスケジュール（遅れた日数分、未来をずらす）
             if (diffDays > 0) {
                 tasks[taskIndex].reviews = tasks[taskIndex].reviews.map(dateStr => {
                     const d = new Date(dateStr);
@@ -226,7 +255,13 @@
                 const totalSteps = 5;
                 const doneSteps = totalSteps - task.reviews.length;
                 task.reviews.forEach((date, index) => {
-                    events.push({ title: `${task.name} (${doneSteps + index + 1}回目)`, start: date, extendedProps: { taskId: task.id }, backgroundColor: '#4a90e2', borderColor: '#4a90e2' });
+                    events.push({ 
+                        title: `${task.name} (${doneSteps + index + 1}回目)`, 
+                        start: date, 
+                        extendedProps: { taskId: task.id }, 
+                        backgroundColor: '#4a90e2', 
+                        borderColor: '#4a90e2' 
+                    });
                 });
             });
             return events;
