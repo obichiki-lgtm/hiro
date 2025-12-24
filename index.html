@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>復習スケジューラー Pro+</title>
+    <title>復習スケジューラー</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -55,7 +55,7 @@
         <div id="calendar"></div>
         <p class="hint">予定をタップで名前編集</p>
         <div style="margin-top: 30px; opacity: 0.7;">
-            <h2>全ログ</h2>
+            <h2>スケジュール一括削除</h2>
             <div id="allTasksList"></div>
         </div>
     </div>
@@ -97,7 +97,7 @@
                 }
             } catch (error) {
                 console.error("Auth Error:", error);
-                alert("ログインに失敗しました。エラー内容: " + error.message);
+                alert("ログインに失敗しました。");
             }
         }
 
@@ -139,7 +139,6 @@
         function addTask() {
             const input = document.getElementById('taskInput');
             if (input.value === "") return;
-            // 復習の全5回のタイミング設定
             const intervals = [1, 4, 11, 25, 55];
             const reviewDates = intervals.map(days => {
                 const d = new Date(); d.setDate(d.getDate() + days);
@@ -159,16 +158,11 @@
 
             const todayStr = getTodayStr();
             const today = new Date(todayStr);
-
-            // 本来予定されていた日付（今日リストにあった日付）を取得
             const scheduledDateStr = tasks[taskIndex].reviews.find(d => d === todayStr) || todayStr;
             const scheduledDate = new Date(scheduledDateStr);
-            
-            // 遅延日数を算出
             const diffTime = today.getTime() - scheduledDate.getTime();
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-            // 自動リスケジュール：遅延があれば未来の予定をすべてスライド
             if (diffDays > 0) {
                 tasks[taskIndex].reviews = tasks[taskIndex].reviews.map(dateStr => {
                     const d = new Date(dateStr);
@@ -176,11 +170,7 @@
                     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 });
             }
-
-            // 今日の分を削除
             tasks[taskIndex].reviews = tasks[taskIndex].reviews.filter(d => d !== todayStr);
-
-            // 統計更新
             let stats = JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 };
             stats.total += 1;
             if (stats.lastDate !== todayStr) {
@@ -189,10 +179,8 @@
                 stats.streak = (stats.lastDate === yesterdayStr) ? stats.streak + 1 : 1;
                 stats.lastDate = todayStr;
             }
-
             saveAllData(tasks, stats);
-            displayTasks();
-            calendar.setOption('events', getCalendarEvents());
+            displayTasks(); calendar.setOption('events', getCalendarEvents());
         }
 
         function updateStats() {
@@ -206,26 +194,18 @@
             const allTasksList = document.getElementById('allTasksList');
             const tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
             const today = getTodayStr();
-            
             todayList.innerHTML = "";
             tasks.forEach(t => {
-                // そのタスクの復習配列の何番目が今日に当たるかを探す
-                const totalSteps = 5; // 全5回
-                const remainingSteps = t.reviews.length;
-                const currentStep = (totalSteps - remainingSteps) + 1;
-                
+                const totalSteps = 5;
+                const currentStep = (totalSteps - t.reviews.length) + 1;
                 if (t.reviews.includes(today)) {
-                    const div = document.createElement('div'); 
-                    div.className = 'task-item';
-                    // 名前 + (◯回目) を表示
+                    const div = document.createElement('div'); div.className = 'task-item';
                     div.innerHTML = `<span>${t.name} <small>(${currentStep}回目)</small></span> 
                                      <button class="btn-done" onclick="completeTask(${t.id})">今日実施</button>`;
                     todayList.appendChild(div);
                 }
             });
-
             if(todayList.innerHTML === "") todayList.innerHTML = '<p style="text-align:center; color:#888; font-size:0.9rem;">今日の復習はありません。</p>';
-            
             allTasksList.innerHTML = "";
             tasks.forEach(t => {
                 const div = document.createElement('div'); div.className = 'task-item'; div.style.borderLeftColor = "#ccc";
@@ -239,18 +219,10 @@
             const tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
             let events = [];
             tasks.forEach(task => {
-                // 登録時の全5回を基準に、今の予定が何回目かを逆算して表示
                 const totalSteps = 5;
                 const doneSteps = totalSteps - task.reviews.length;
-                
                 task.reviews.forEach((date, index) => {
-                    events.push({ 
-                        title: `${task.name} (${doneSteps + index + 1}回目)`, 
-                        start: date, 
-                        extendedProps: { taskId: task.id }, 
-                        backgroundColor: '#4a90e2', 
-                        borderColor: '#4a90e2' 
-                    });
+                    events.push({ title: `${task.name} (${doneSteps + index + 1}回目)`, start: date, extendedProps: { taskId: task.id }, backgroundColor: '#4a90e2', borderColor: '#4a90e2' });
                 });
             });
             return events;
@@ -270,7 +242,7 @@
         }
 
         function deleteFullTask(id) {
-            if(!confirm("削除しますか？")) return;
+            if(!confirm("この学習の全スケジュールを削除しますか？")) return;
             let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
             tasks = tasks.filter(t => t.id !== id);
             saveAllData(tasks, JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 });
