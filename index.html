@@ -12,6 +12,28 @@
         :root { --primary-color: #4a90e2; --bg-color: #f4f7f6; --success-color: #2ecc71; --text-color: #333; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
         .container { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; box-sizing: border-box; position: relative; }
+        
+        /* ヘッダーカスタマイズ：すべて中央に集める */
+        .fc-header-toolbar { display: flex !important; justify-content: center !important; flex-direction: column !important; gap: 10px !important; }
+        .fc-toolbar-chunk { display: flex !important; align-items: center !important; justify-content: center !important; gap: 5px !important; }
+        
+        /* 年月と🔄のスタイル */
+        .fc-toolbar-title { font-size: 1.1rem !important; white-space: nowrap !important; margin: 0 !important; }
+        #viewCycleBtn {
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 5px;
+        }
+
+        /* 既存のスタイル */
         .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
         #loginBtn { background: #eee; border: none; padding: 5px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
         #loginBtn.logged-in { background: #e3f2fd; color: var(--primary-color); }
@@ -21,26 +43,6 @@
         .status-label { font-size: 0.7rem; color: #777; font-weight: bold; }
         h1 { font-size: 1.3rem; text-align: center; color: var(--primary-color); margin: 10px 0 20px; }
         h2 { font-size: 1rem; border-left: 5px solid var(--primary-color); padding-left: 10px; margin-top: 25px; margin-bottom: 12px; line-height: 1.2; }
-        
-        /* カレンダーヘッダーのカスタマイズ：中央寄せ */
-        .fc-header-toolbar { display: flex !important; justify-content: space-between !important; align-items: center !important; }
-        .fc-toolbar-chunk:nth-child(2) { display: flex !important; align-items: center !important; justify-content: center !important; gap: 8px; }
-        .fc-toolbar-title { font-size: 1.1rem !important; white-space: nowrap !important; margin: 0 !important; }
-
-        /* 🔄 ボタンのスタイル */
-        #viewCycleBtn {
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 1rem;
-            cursor: pointer;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
         .input-area { display: flex; gap: 8px; margin-bottom: 15px; }
         input[type="text"] { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; }
         button.add-btn { background-color: var(--primary-color); color: white; border: none; padding: 0 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
@@ -48,7 +50,6 @@
         .btn-done { background-color: var(--success-color); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; min-width: 80px; }
         .btn-delete { background-color: #95a5a6; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; }
         #calendar { margin-top: 10px; background: white; font-size: 0.75rem; }
-        .hint { font-size: 0.7rem; color: #999; text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -67,7 +68,6 @@
         <div id="todayList"></div>
         <h2>カレンダー</h2>
         <div id="calendar"></div>
-        <p class="hint">予定をタップで名前編集</p>
         <div style="margin-top: 30px; opacity: 0.7;">
             <h2>スケジュール一括削除</h2>
             <div id="allTasksList"></div>
@@ -75,6 +75,7 @@
     </div>
 
     <script>
+        // --- Firebase 設定 ---
         const firebaseConfig = {
             apiKey: "AIzaSyAP51tb-FcRmc1RukwczxfxzUdOkE7yf4g",
             authDomain: "my-study-app-6a0b6.firebaseapp.com",
@@ -89,7 +90,7 @@
         const db = firebase.firestore();
         let currentUser = null;
         let calendar;
-        let currentMode = 0; // 0: month, 1: 2weeks, 2: week
+        let currentMode = 0;
 
         auth.onAuthStateChanged(user => {
             currentUser = user;
@@ -111,17 +112,15 @@
                 initialView: 'dayGridMonth',
                 locale: 'ja',
                 aspectRatio: 1.2,
-                // タイトルを常に「年 月」で固定
                 titleFormat: { year: 'numeric', month: 'long' },
                 headerToolbar: {
-                    left: 'prev,next',
-                    center: 'title', // タイトルを中央へ
-                    right: 'today'
+                    left: '',
+                    center: 'title,prev,next,today', // ここで順番を並べる
+                    right: ''
                 },
                 views: { twoWeeks: { type: 'dayGrid', duration: { weeks: 2 } } },
                 events: getCalendarEvents(),
                 eventClick: function(info) { editTaskName(info.event.extendedProps.taskId); },
-                // 描画のたびにボタンをタイトルの横に配置
                 datesSet: function() { insertCycleButton(); }
             });
             calendar.render();
@@ -140,11 +139,13 @@
                 else if (currentMode === 1) calendar.changeView('twoWeeks');
                 else calendar.changeView('dayGridWeek');
             };
-            // タイトルのすぐ後ろ（右側）に挿入
+            
+            // 年月(titleEl)の直後に挿入。
+            // これにより [2025年12月] [🔄] [＜] [＞] [today] の順になります。
             titleEl.after(btn);
         }
 
-        // --- データ管理ロジック ---
+        // --- データロジック (省略なし) ---
         function saveAllData(tasks, stats) {
             localStorage.setItem('myTasks', JSON.stringify(tasks));
             localStorage.setItem('myStats', JSON.stringify(stats));
@@ -169,7 +170,7 @@
 
         function addTask() {
             const input = document.getElementById('taskInput');
-            if (input.value === "") return;
+            if (!input.value) return;
             const intervals = [1, 4, 11, 25, 55];
             const reviewDates = intervals.map(days => {
                 const d = new Date(); d.setDate(d.getDate() + days);
