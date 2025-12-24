@@ -92,7 +92,6 @@
                     if(confirm("ログアウトしますか？")) await auth.signOut();
                 } else {
                     const provider = new firebase.auth.GoogleAuthProvider();
-                    // ポップアップがブロックされる場合があるため、失敗時にアラートを出すように強化
                     await auth.signInWithPopup(provider);
                 }
             } catch (error) {
@@ -101,8 +100,8 @@
             }
         }
 
-        // --- 以下、F.htmlベースのロジック（そのまま） ---
         window.onload = function() { initCalendar(); displayTasks(); updateStats(); };
+
         function initCalendar() {
             const calendarEl = document.getElementById('calendar');
             calendar = new FullCalendar.Calendar(calendarEl, {
@@ -113,11 +112,13 @@
             });
             calendar.render();
         }
+
         function saveAllData(tasks, stats) {
             localStorage.setItem('myTasks', JSON.stringify(tasks));
             localStorage.setItem('myStats', JSON.stringify(stats));
             if (currentUser) db.collection("users").doc(currentUser.uid).set({ tasks, stats }, { merge: true });
         }
+
         async function syncWithCloud() {
             if (!currentUser) return;
             const doc = await db.collection("users").doc(currentUser.uid).get();
@@ -128,10 +129,12 @@
                 displayTasks(); updateStats(); calendar.setOption('events', getCalendarEvents());
             }
         }
+
         function getTodayStr() {
             const now = new Date();
             return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         }
+
         function addTask() {
             const input = document.getElementById('taskInput');
             if (input.value === "") return;
@@ -146,11 +149,38 @@
             saveAllData(tasks, JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 });
             input.value = ""; displayTasks(); calendar.setOption('events', getCalendarEvents());
         }
+
+        // --- 加筆：自動リスケジュール対応の完了処理 ---
         function completeTask(id) {
             let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
             const taskIndex = tasks.findIndex(t => t.id === id);
+            if (taskIndex === -1) return;
+
             const todayStr = getTodayStr();
+            const today = new Date(todayStr);
+
+            // 1. 本来の予定日（今日リストに表示されていた日付）を探す
+            const scheduledDateStr = tasks[taskIndex].reviews.find(d => d === todayStr) || todayStr;
+            const scheduledDate = new Date(scheduledDateStr);
+            
+            // 2. 遅延日数を計算 (今日 - 予定日)
+            const diffTime = today.getTime() - scheduledDate.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            // 3. 遅れがある場合のみ、未来の全予定をスライドさせる
+            if (diffDays > 0) {
+                tasks[taskIndex].reviews = tasks[taskIndex].reviews.map(dateStr => {
+                    const d = new Date(dateStr);
+                    // 全予定に遅延分を加算
+                    d.setDate(d.getDate() + diffDays);
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                });
+            }
+
+            // 4. 今日の分を完了として削除
             tasks[taskIndex].reviews = tasks[taskIndex].reviews.filter(d => d !== todayStr);
+
+            // 統計更新
             let stats = JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 };
             stats.total += 1;
             if (stats.lastDate !== todayStr) {
@@ -159,14 +189,18 @@
                 stats.streak = (stats.lastDate === yesterdayStr) ? stats.streak + 1 : 1;
                 stats.lastDate = todayStr;
             }
+
             saveAllData(tasks, stats);
-            displayTasks(); calendar.setOption('events', getCalendarEvents());
+            displayTasks();
+            calendar.setOption('events', getCalendarEvents());
         }
+
         function updateStats() {
             const stats = JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 };
             document.getElementById('streakCount').innerText = stats.streak;
             document.getElementById('totalDone').innerText = stats.total;
         }
+
         function displayTasks() {
             const todayList = document.getElementById('todayList');
             const allTasksList = document.getElementById('allTasksList');
@@ -187,6 +221,7 @@
             });
             updateStats();
         }
+
         function getCalendarEvents() {
             const tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
             let events = [];
@@ -195,6 +230,7 @@
             }); });
             return events;
         }
+
         function editTaskName(id) {
             let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
             const taskIndex = tasks.findIndex(t => t.id === id);
@@ -207,6 +243,7 @@
                 }
             }
         }
+
         function deleteFullTask(id) {
             if(!confirm("削除しますか？")) return;
             let tasks = JSON.parse(localStorage.getItem('myTasks')) || [];
