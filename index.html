@@ -13,16 +13,20 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
         .container { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; box-sizing: border-box; }
         
-        /* カレンダー表示の安定化設定 */
+        /* カレンダーヘッダー設定 */
         .fc .fc-toolbar { display: flex !important; justify-content: space-between !important; align-items: center !important; position: relative !important; margin-bottom: 20px !important; }
         .fc-toolbar-chunk:nth-child(2) { position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 100; }
-        .fc-toolbar-title { font-size: 0.85rem !important; font-weight: bold !important; padding: 6px 12px !important; border: 1px solid #ddd !important; border-radius: 8px !important; background: #fff !important; cursor: pointer !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .fc-toolbar-title { font-size: 0.85rem !important; font-weight: bold !important; padding: 6px 12px !important; border: 1px solid #ddd !important; border-radius: 8px !important; background: #fff !important; cursor: pointer !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); white-space: nowrap; }
         .fc .fc-button { padding: 4px 8px !important; font-size: 0.7rem !important; background-color: #fff !important; color: #444 !important; border: 1px solid #ddd !important; }
-        #calendar { min-height: 350px !important; background: #fff; margin-top: 10px; }
 
+        /* セル・リストの高さ調整 */
+        .fc-daygrid-day-frame { min-height: 55px !important; }
+        .fc-list-event-title { font-size: 0.85rem !important; cursor: pointer; }
+        
         /* UIパーツ */
         .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
         #loginBtn { background: #eee; border: none; padding: 5px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
+        #loginBtn.logged-in { background: #e3f2fd; color: var(--primary-color); }
         h1 { font-size: 1.2rem; text-align: center; color: var(--primary-color); margin: 5px 0 15px; }
         h2 { font-size: 0.95rem; border-left: 4px solid var(--primary-color); padding-left: 8px; margin-top: 20px; margin-bottom: 10px; }
         
@@ -35,7 +39,11 @@
         .add-btn { background-color: var(--todo-color); color: white; border: none; padding: 0 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.8rem; }
         
         .task-item { background: #fff; border: 1px solid #eee; border-left: 5px solid #ccc; padding: 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; font-size: 0.85rem; }
+        .todo-item { border-left-color: var(--todo-color); }
+        .review-item { border-left-color: var(--primary-color); }
         .btn-done { background-color: var(--success-color); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
+        
+        #calendar { margin-top: 10px; background: white; border-top: 1px solid #eee; padding-top: 10px; min-height: 300px; }
         .hint { font-size: 0.7rem; color: #999; text-align: center; margin-top: 12px; line-height: 1.5; }
     </style>
 </head>
@@ -48,21 +56,22 @@
             <div class="status-item"><span class="status-value" id="totalDone">0</span><span class="status-label">🏆 累計完了</span></div>
         </div>
 
-        <h2>ToDoリスト</h2>
+        <h2>ToDoリスト (新規登録)</h2>
         <div class="input-area">
             <input type="text" id="todoInput" placeholder="学習内容を入力">
             <button class="add-btn" onclick="addTodo()">登録</button>
         </div>
         <div id="todoList"></div>
+
         <h2>今日の復習</h2>
         <div id="todayReviewList"></div>
 
         <h2>カレンダー</h2>
         <div id="calendar"></div>
-        <p class="hint">タイトルをタップして切替：<br>2週間 → 1週間 → 月</p>
+        <p class="hint">タイトル（年月）をタップして切替：<br>2週間 → 1週間 → 今日(リスト) → 月</p>
 
         <div style="margin-top: 40px; opacity: 0.6;">
-            <h2>全タスクの削除</h2>
+            <h2>全タスクの管理・削除</h2>
             <div id="allTasksList"></div>
         </div>
     </div>
@@ -83,15 +92,13 @@
         let currentUser = null;
         let calendar;
         let viewIndex = 0;
-        
-        // 動作の安定性を重視した3モード
-        const viewModes = ['dayGridTwoWeeks', 'dayGridWeek', 'dayGridMonth'];
+        const viewModes = ['dayGridTwoWeeks', 'dayGridWeek', 'listDay', 'dayGridMonth'];
 
         auth.onAuthStateChanged(user => {
             currentUser = user;
             const btn = document.getElementById('loginBtn');
-            if (user) { btn.innerText = "✅ 同期中"; syncWithCloud(); }
-            else { btn.innerText = "☁️ ログイン"; }
+            if (user) { btn.innerText = "✅ 同期中"; btn.classList.add('logged-in'); syncWithCloud(); }
+            else { btn.innerText = "☁️ ログイン"; btn.classList.remove('logged-in'); }
         });
 
         async function handleAuth() {
@@ -107,15 +114,15 @@
                 initialView: 'dayGridTwoWeeks',
                 locale: 'ja',
                 height: 'auto',
-                // タイトルの年月表示をシンプルに
+                noEventsContent: '今日の復習予定はありません', // リスト表示が空の時のメッセージ
                 titleFormat: function(info) {
                     const start = info.start.marker;
-                    if (calendar.view.type === 'dayGridMonth') return (start.getFullYear()) + '年 ' + (start.getMonth() + 1) + '月';
+                    if (calendar.view.type === 'dayGridMonth') return `${start.getFullYear()}年 ${start.getMonth() + 1}月`;
+                    if (calendar.view.type === 'listDay') return `${start.getFullYear()}年${start.getMonth() + 1}月${start.getDate()}日`;
                     const end = new Date(info.end.marker);
                     end.setDate(end.getDate() - 1);
-                    return (start.getMonth() + 1) + '/' + start.getDate() + ' - ' + (end.getMonth() + 1) + '/' + end.getDate();
+                    return `${start.getMonth() + 1}/${start.getDate()} – ${end.getMonth() + 1}/${end.getDate()}`;
                 },
-                // 曜日を日付のみにしてスッキリさせる
                 dayHeaderContent: function(arg) {
                     return (arg.date.getMonth() + 1) + '/' + arg.date.getDate();
                 },
@@ -128,6 +135,7 @@
                 datesSet: function() {
                     const titleEl = document.querySelector('.fc-toolbar-title');
                     if (titleEl) {
+                        titleEl.onclick = null;
                         titleEl.onclick = function() {
                             viewIndex = (viewIndex + 1) % viewModes.length;
                             calendar.changeView(viewModes[viewIndex]);
@@ -138,7 +146,7 @@
             calendar.render();
         }
 
-        // --- ロジック ---
+        // --- データ管理 ---
         function getTasks() { return JSON.parse(localStorage.getItem('myTasks')) || []; }
         function getTodos() { return JSON.parse(localStorage.getItem('myTodos')) || []; }
         function getStats() { return JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 }; }
@@ -165,6 +173,7 @@
             }
         }
 
+        // --- アプリ機能 ---
         function addTodo() {
             const input = document.getElementById('todoInput');
             if (!input.value) return;
@@ -223,13 +232,13 @@
             const todoList = document.getElementById('todoList');
             todoList.innerHTML = "";
             getTodos().forEach(t => {
-                todoList.innerHTML += `<div class="task-item" style="border-left: 5px solid var(--todo-color)"><span>${t.name}</span><button class="btn-done" onclick="completeTodo(${t.id})">完了</button></div>`;
+                todoList.innerHTML += `<div class="task-item todo-item"><span>${t.name}</span><button class="btn-done" onclick="completeTodo(${t.id})">完了</button></div>`;
             });
             const reviewList = document.getElementById('todayReviewList');
             reviewList.innerHTML = "";
             getTasks().forEach(t => {
                 if (t.reviews.includes(today)) {
-                    reviewList.innerHTML += `<div class="task-item" style="border-left: 5px solid var(--primary-color)"><span>${t.name}</span><button class="btn-done" onclick="completeReview(${t.id})">完了</button></div>`;
+                    reviewList.innerHTML += `<div class="task-item review-item"><span>${t.name}</span><button class="btn-done" onclick="completeReview(${t.id})">完了</button></div>`;
                 }
             });
             if(!reviewList.innerHTML) reviewList.innerHTML = '<p style="text-align:center; color:#999; font-size:0.75rem;">今日の復習はありません</p>';
