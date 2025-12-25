@@ -13,69 +13,71 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
         .container { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; box-sizing: border-box; position: relative; }
         
-        /* --- カレンダーヘッダー：3カラム構成で真ん中を完全固定 --- */
+        /* --- カレンダーヘッダー：真ん中固定と完全右揃え --- */
         .fc .fc-toolbar {
-            display: grid !important;
-            grid-template-columns: 1fr auto 1fr !important; /* 左(空) | 中(年月) | 右(ボタン) */
-            align-items: center !important;
-            margin-bottom: 20px !important;
-            gap: 0 !important;
-        }
-
-        /* 中央：年月タイトル */
-        .fc-toolbar-chunk:nth-child(2) {
-            grid-column: 2 !important;
             display: flex !important;
-            justify-content: center !important;
+            justify-content: center !important; /* 全体は中央寄せ */
+            align-items: center !important;
+            position: relative !important;
+            height: 45px !important;
+            margin-bottom: 20px !important;
         }
 
+        /* 中央：年月（絶対配置で中心軸に固定） */
         .fc-toolbar-title {
+            position: absolute !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
             font-size: 0.95rem !important;
             white-space: nowrap !important;
             cursor: pointer !important;
-            padding: 5px 10px !important;
+            padding: 5px 12px !important;
             border-radius: 6px !important;
             background: #fff !important;
             border: 1px solid #ddd !important;
             font-weight: bold !important;
-            user-select: none !important;
+            z-index: 100 !important;
             display: inline-flex !important;
             align-items: center !important;
         }
         .fc-toolbar-title::after { content: " 🔄"; font-size: 0.7rem; opacity: 0.5; margin-left: 4px; }
 
-        /* 右側：移動ボタン群 */
+        /* 右側：ボタン群（絶対配置で右端に完全固定） */
         .fc-toolbar-chunk:nth-child(1) {
-            grid-column: 3 !important;
+            position: absolute !important;
+            right: 0 !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
             display: flex !important;
-            justify-content: flex-end !important; /* 右揃え */
             gap: 4px !important;
+            z-index: 101 !important;
         }
         
-        /* 不要な3番目の塊を消去 */
-        .fc-toolbar-chunk:nth-child(3) { display: none !important; }
+        /* 不要な要素 */
+        .fc-toolbar-chunk:nth-child(2),
+        .fc-toolbar-chunk:nth-child(3) { 
+            display: contents !important; /* titleが含まれる場合は中身だけ出す */
+        }
 
-        /* ボタンの小型化とデザイン */
+        /* ボタンの小型化 */
         .fc .fc-button {
-            padding: 2px 5px !important;
-            font-size: 0.75rem !important;
+            padding: 1px 5px !important;
+            font-size: 0.7rem !important;
             height: 28px !important;
             background-color: #fff !important;
             color: #444 !important;
             border: 1px solid #ddd !important;
             box-shadow: none !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
         }
         .fc-today-button {
-            font-size: 0.7rem !important;
-            padding: 0 8px !important;
+            font-size: 0.65rem !important;
+            padding: 0 6px !important;
             font-weight: bold !important;
         }
-        .fc .fc-icon { font-size: 0.9em !important; }
+        .fc .fc-icon { font-size: 0.85em !important; }
 
-        /* 既存UIパーツ */
+        /* その他UI（変更なし） */
         .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
         #loginBtn { background: #eee; border: none; padding: 5px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
         #loginBtn.logged-in { background: #e3f2fd; color: var(--primary-color); }
@@ -154,29 +156,23 @@
                 locale: 'ja',
                 aspectRatio: 1.2,
                 headerToolbar: {
-                    left: 'prev,next,today', // 左側に置いてCSSで右端に飛ばす
-                    center: 'title',        // 中央に固定
-                    right: ''               // 空にする
+                    left: 'prev,next,today', // CSSで右端へ飛ばす対象
+                    center: 'title',        // 真ん中に固定
+                    right: ''
                 },
-                // 年月またぎの表記カスタマイズ
                 titleFormat: function(info) {
                     const start = info.start.marker;
                     const end = info.end.marker;
                     const startYear = start.getFullYear();
                     const startMonth = start.getMonth() + 1;
-                    
-                    // 表示範囲の最終日を取得（1日引く）
                     const actualEnd = new Date(end);
                     actualEnd.setDate(actualEnd.getDate() - 1);
-                    const endYear = actualEnd.getFullYear();
                     const endMonth = actualEnd.getMonth() + 1;
 
-                    if (startMonth === endMonth && startYear === endYear) {
+                    if (startMonth === endMonth) {
                         return `${startYear}年${startMonth}月`;
-                    } else if (startYear === endYear) {
-                        return `${startYear}年${startMonth}月 – ${endMonth}月`;
                     } else {
-                        // 年をまたぐ場合
+                        // 2025年12月 – 1月 の形式
                         return `${startYear}年${startMonth}月 – ${endMonth}月`;
                     }
                 },
@@ -198,7 +194,6 @@
             calendar.render();
         }
 
-        // --- データ管理 ---
         function saveAllData(tasks, stats) {
             localStorage.setItem('myTasks', JSON.stringify(tasks));
             localStorage.setItem('myStats', JSON.stringify(stats));
