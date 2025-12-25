@@ -13,23 +13,23 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
         .container { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; box-sizing: border-box; }
         
-        /* カレンダーヘッダー調整：中央タイトルタップ */
-        .fc .fc-toolbar { display: flex !important; justify-content: space-between !important; align-items: center !important; position: relative !important; margin-bottom: 20px !important; height: 40px !important; }
-        .fc-toolbar-chunk:nth-child(2) { position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 1 !important; }
-        .fc-toolbar-title { font-size: 0.85rem !important; font-weight: bold !important; padding: 5px 12px !important; border: 1px solid #ddd !important; border-radius: 6px !important; background: white !important; cursor: pointer !important; white-space: nowrap !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .fc-toolbar-chunk:nth-child(3) { margin-left: auto !important; display: flex !important; gap: 2px !important; z-index: 2 !important; }
-        .fc .fc-button { padding: 1px 4px !important; height: 26px !important; font-size: 0.65rem !important; background-color: #fff !important; color: #444 !important; border: 1px solid #ddd !important; }
+        /* ヘッダー・タイトル設定 */
+        .fc .fc-toolbar { display: flex !important; justify-content: space-between !important; align-items: center !important; position: relative !important; margin-bottom: 20px !important; }
+        .fc-toolbar-chunk:nth-child(2) { position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; }
+        .fc-toolbar-title { font-size: 0.9rem !important; font-weight: bold !important; padding: 6px 12px !important; border: 1px solid #ddd !important; border-radius: 8px !important; background: #fff !important; cursor: pointer !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .fc .fc-button { padding: 2px 6px !important; font-size: 0.7rem !important; background-color: #fff !important; color: #444 !important; border: 1px solid #ddd !important; }
 
-        /* リスト表示の時のスタイル調整 */
-        .fc-list-event-title { cursor: pointer; }
+        /* リスト表示のカスタマイズ（スマホ最適化） */
         .fc-list-day-side-text { color: var(--primary-color); font-weight: bold; }
+        .fc-list-event-title { cursor: pointer; font-size: 0.85rem; }
 
-        /* UIコンポーネント */
+        /* UIパーツ */
         .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
         #loginBtn { background: #eee; border: none; padding: 5px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
         #loginBtn.logged-in { background: #e3f2fd; color: var(--primary-color); }
         h1 { font-size: 1.2rem; text-align: center; color: var(--primary-color); margin: 5px 0 15px; }
         h2 { font-size: 0.95rem; border-left: 4px solid var(--primary-color); padding-left: 8px; margin-top: 20px; margin-bottom: 10px; }
+        
         .status-panel { display: flex; justify-content: space-around; background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 10px; margin-bottom: 15px; }
         .status-value { display: block; font-size: 1.4rem; font-weight: bold; color: var(--primary-color); }
         .status-label { font-size: 0.65rem; color: #777; }
@@ -41,12 +41,10 @@
         .task-item { background: #fff; border: 1px solid #eee; border-left: 5px solid #ccc; padding: 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; font-size: 0.85rem; }
         .todo-item { border-left-color: var(--todo-color); }
         .review-item { border-left-color: var(--primary-color); }
-        
         .btn-done { background-color: var(--success-color); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
-        .btn-del { background-color: #95a5a6; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; }
         
-        #calendar { margin-top: 10px; background: white; font-size: 0.75rem; border-top: 1px solid #eee; padding-top: 15px; min-height: 300px; }
-        .hint { font-size: 0.7rem; color: #999; text-align: center; margin-top: 8px; }
+        #calendar { margin-top: 10px; background: white; border-top: 1px solid #eee; padding-top: 10px; min-height: 350px; }
+        .hint { font-size: 0.7rem; color: #999; text-align: center; margin-top: 12px; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -59,7 +57,7 @@
             <div class="status-item"><span class="status-value" id="totalDone">0</span><span class="status-label">🏆 累計完了</span></div>
         </div>
 
-        <h2>ToDoリスト (新規学習)</h2>
+        <h2>ToDoリスト (新規)</h2>
         <div class="input-area">
             <input type="text" id="todoInput" placeholder="学習内容を入力">
             <button class="add-btn" onclick="addTodo()">登録</button>
@@ -71,10 +69,10 @@
 
         <h2>カレンダー</h2>
         <div id="calendar"></div>
-        <p class="hint">タイトルをタップで表示切替 (月/週/日) <br> 予定をタップで名前変更</p>
+        <p class="hint">タイトルをタップ：表示切替 (月 / 2週間 / 今日)<br>予定をタップ：名前変更</p>
 
         <div style="margin-top: 40px; opacity: 0.6;">
-            <h2>全タスク管理</h2>
+            <h2>管理・削除</h2>
             <div id="allTasksList"></div>
         </div>
     </div>
@@ -95,8 +93,8 @@
         let currentUser = null;
         let calendar;
         let viewIndex = 0;
-        // リスト表示(listWeek)を組み込み、崩れを防止
-        const viewModes = ['dayGridMonth', 'listWeek', 'listDay'];
+        // 表示モードを 月 -> 2週間(リスト) -> 今日(リスト) に設定
+        const viewModes = ['dayGridMonth', 'listTwoWeeks', 'listDay'];
 
         auth.onAuthStateChanged(user => {
             currentUser = user;
@@ -118,6 +116,9 @@
                 initialView: 'dayGridMonth',
                 locale: 'ja',
                 height: 'auto',
+                views: {
+                    listTwoWeeks: { type: 'list', duration: { weeks: 2 }, buttonText: '2週間' }
+                },
                 headerToolbar: { left: '', center: 'title', right: 'prev,next,today' },
                 events: getCalendarEvents(),
                 eventClick: function(info) { editTaskName(info.event.extendedProps.taskId); },
@@ -221,15 +222,11 @@
 
         function displayAll() {
             const today = new Date().toISOString().split('T')[0];
-            
-            // ToDo
             const todoList = document.getElementById('todoList');
             todoList.innerHTML = "";
             getTodos().forEach(t => {
                 todoList.innerHTML += `<div class="task-item todo-item"><span>${t.name}</span><button class="btn-done" onclick="completeTodo(${t.id})">完了</button></div>`;
             });
-
-            // 復習
             const reviewList = document.getElementById('todayReviewList');
             reviewList.innerHTML = "";
             getTasks().forEach(t => {
@@ -238,12 +235,10 @@
                 }
             });
             if(!reviewList.innerHTML) reviewList.innerHTML = '<p style="text-align:center; color:#999; font-size:0.75rem;">今日の復習はありません</p>';
-
-            // 管理用
             const allTasksList = document.getElementById('allTasksList');
             allTasksList.innerHTML = "";
             getTasks().forEach(t => {
-                allTasksList.innerHTML += `<div class="task-item" style="border-left-color:#ccc"><span>${t.name}</span><button class="btn-del" onclick="deleteItem(${t.id}, 'task')">削除</button></div>`;
+                allTasksList.innerHTML += `<div class="task-item" style="border-left-color:#ccc"><span>${t.name}</span><button class="btn-done" style="background:#95a5a6" onclick="deleteItem(${t.id}, 'task')">削除</button></div>`;
             });
         }
 
