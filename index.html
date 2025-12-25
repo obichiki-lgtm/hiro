@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>学習スケジューラー Pro+</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
     <style>
         :root {
@@ -11,28 +14,32 @@
             --bg-color: #f8fafb;
             --success-color: #2ecc71;
             --todo-color: #f39c12;
-            --danger-color: #ff5e5e;
+            --danger-color: #ff4d4f; /* 指摘：削除ボタン用の赤 */
             --text-color: #333;
         }
 
         body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
-        .container { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 500px; box-sizing: border-box; position: relative; }
+        .container { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 500px; box-sizing: border-box; }
         
-        /* クラウド同期ステータス (image_e10e3c.pngの再現) */
-        .sync-status { position: absolute; top: 15px; right: 20px; font-size: 0.75rem; color: #2ecc71; display: flex; align-items: center; gap: 4px; }
-        .sync-status.syncing { color: #aaa; }
+        /* クラウドログインヘッダー */
+        .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
+        #loginBtn { background: #eee; border: none; padding: 6px 14px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
 
+        /* 統計パネル */
         .status-panel { display: flex; justify-content: space-around; background: #fff; border: 1px solid #f0f0f0; border-radius: 15px; padding: 15px; margin-bottom: 20px; }
         .status-value { display: block; font-size: 1.8rem; font-weight: bold; color: var(--primary-color); text-align: center; }
         .status-label { font-size: 0.75rem; color: #888; text-align: center; }
 
+        /* 入力エリア */
         .input-area { display: flex; gap: 10px; margin-bottom: 20px; }
         input[type="text"] { flex: 1; padding: 14px; border: 1px solid #e0e0e0; border-radius: 12px; font-size: 16px; outline: none; }
         .add-btn { background-color: var(--todo-color); color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: bold; cursor: pointer; }
 
+        /* 見出し */
         h2 { font-size: 1.1rem; border-left: 5px solid var(--primary-color); padding-left: 12px; margin: 30px 0 15px; color: #444; }
         .todo-header { border-left-color: var(--todo-color); }
 
+        /* リストアイテム */
         .task-item { background: #fff; border: 1px solid #f0f0f0; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 15px; font-size: 0.95rem; }
         .todo-item { border-left: 6px solid var(--todo-color); }
         .review-item { border-left: 6px solid var(--primary-color); }
@@ -40,27 +47,48 @@
 
         .button-group { display: flex; gap: 8px; }
         .btn-done { background-color: var(--success-color); color: white; border: none; padding: 10px 18px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
+        
+        /* 指摘：削除ボタンを赤色に */
         .btn-delete { background-color: var(--danger-color); color: white; border: none; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
         
-        #calendar { margin-top: 10px; border-radius: 10px; border: 1px solid #eee; padding: 5px; }
+        /* カレンダー・カスタマイズ */
+        #calendar { margin-top: 10px; border-radius: 15px; border: 1px solid #eee; padding: 5px; background: #fff; }
+        
         .fc .fc-toolbar { display: flex !important; justify-content: space-between !important; align-items: center !important; }
-        .fc-toolbar-chunk:nth-child(1) { flex: 1; visibility: hidden; } 
+        .fc-toolbar-chunk:nth-child(1) { flex: 1; } 
         .fc-toolbar-chunk:nth-child(2) { flex: 2; text-align: center; } 
         .fc-toolbar-chunk:nth-child(3) { flex: 1; display: flex; justify-content: flex-end; gap: 4px; } 
 
-        .fc-toolbar-title { font-size: 1.15rem !important; font-weight: bold !important; cursor: pointer; padding: 5px 10px; border-radius: 8px; border-left: none !important; transition: background 0.2s; display: inline-block; }
+        /* 指摘：年月の青い棒を完全に消去 */
+        .fc-toolbar-title { 
+            font-size: 1.1rem !important; 
+            font-weight: bold !important; 
+            cursor: pointer; 
+            padding: 6px 12px;
+            border-radius: 8px;
+            border-left: none !important; 
+            border: 1px solid #eee;
+            background: #fff;
+            transition: background 0.2s;
+            display: inline-block;
+        }
         .fc-toolbar-title:hover { background-color: #f0f4f8; }
 
-        .fc .fc-button-primary { background-color: #444 !important; border: none !important; padding: 6px 10px !important; font-size: 0.8rem !important; }
+        .fc .fc-button-primary { 
+            background-color: #fff !important; 
+            color: #444 !important;
+            border: 1px solid #ddd !important; 
+            padding: 6px 10px !important;
+            font-size: 0.75rem !important;
+        }
+        .fc .fc-button-primary:hover { background-color: #f9f9f9 !important; }
+
         .hint { font-size: 0.75rem; color: #aaa; text-align: center; margin-top: 12px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="sync-status" id="syncIndicator">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-            同期中
-        </div>
+        <div class="auth-header"><button id="loginBtn" onclick="handleAuth()">☁️ ログイン</button></div>
 
         <h1 style="font-size:1.4rem; text-align:center; color:var(--primary-color); margin: 5px 0 20px;">学習スケジューラー</h1>
         
@@ -74,7 +102,7 @@
             <button class="add-btn" onclick="addTodo()">登録</button>
         </div>
 
-        <h2 class="todo-header">ToDo</h2>
+        <h2 class="todo-header">ToDoリスト</h2>
         <div id="todoList"></div>
 
         <h2>今日の復習</h2>
@@ -82,68 +110,97 @@
 
         <h2>カレンダー</h2>
         <div id="calendar"></div>
-        <p class="hint">年月をタップ：1ヶ月 ↔ 2週間 切り替え</p>
+        <p class="hint">年月をタップ：2週間 ↔ 月 ↔ 今日</p>
 
-        <h2 style="border-left-color: #ccc; color: #888;">全データの管理</h2>
+        <h2 style="border-left-color: #ccc; color: #888;">スケジュール一括削除</h2>
         <div id="allTasksManagementList"></div>
     </div>
 
     <script>
+        // --- Firebase設定 ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAP51tb-FcRmc1RukwczxfxzUdOkE7yf4g",
+            authDomain: "my-study-app-6a0b6.firebaseapp.com",
+            projectId: "my-study-app-6a0b6",
+            storageBucket: "my-study-app-6a0b6.firebasestorage.app",
+            messagingSenderId: "441129563668",
+            appId: "1:441129563668:web:48cc07f882bff1785e5901"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        let currentUser = null;
+
         let calendar = null;
+        let vModes = ['dayGridTwoWeeks', 'dayGridMonth', 'listDay'];
+        let vIdx = 0;
 
-        // --- クラウド化機能 (Cloud Logic) ---
-        // ユーザー情報を取得 (本来は認証システムから取得)
-        const getUserId = () => "user_12345"; 
+        // 認証管理
+        auth.onAuthStateChanged(user => {
+            currentUser = user;
+            const btn = document.getElementById('loginBtn');
+            if (user) { 
+                btn.innerText = "✅ 同期中"; 
+                syncWithCloud(); 
+            } else { 
+                btn.innerText = "☁️ ログイン"; 
+            }
+        });
 
-        async function syncWithCloud(data) {
-            const indicator = document.getElementById('syncIndicator');
-            indicator.classList.add('syncing');
-            indicator.innerHTML = "同期中...";
-
-            // クラウドへの保存シミュレーション (API送信など)
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    console.log("Cloud synced for user:", getUserId(), data);
-                    indicator.classList.remove('syncing');
-                    indicator.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> 同期中';
-                    resolve();
-                }, 800);
-            });
+        async function handleAuth() {
+            if (currentUser) { 
+                if(confirm("ログアウトしますか？")) await auth.signOut(); 
+            } else { 
+                await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); 
+            }
         }
-        // ----------------------------------
 
+        // --- データ管理 ---
         const getTasks = () => JSON.parse(localStorage.getItem('myTasks')) || [];
         const getTodos = () => JSON.parse(localStorage.getItem('myTodos')) || [];
         const getStats = () => JSON.parse(localStorage.getItem('myStats')) || { total: 0, streak: 0, lastDate: "" };
 
-        async function save(tasks, todos, stats) {
+        async function saveAll(tasks, todos, stats) {
             localStorage.setItem('myTasks', JSON.stringify(tasks));
             localStorage.setItem('myTodos', JSON.stringify(todos));
             localStorage.setItem('myStats', JSON.stringify(stats));
             
-            // 保存のタイミングでクラウドと同期
-            await syncWithCloud({ tasks, todos, stats });
+            // クラウド同期
+            if (currentUser) {
+                db.collection("users").doc(currentUser.uid).set({ tasks, todos, stats }, { merge: true });
+            }
             
             renderUI();
-            if (calendar) {
-                calendar.removeAllEvents();
-                calendar.addEventSource(generateEvents(tasks));
+            if (calendar) calendar.refetchEvents();
+        }
+
+        async function syncWithCloud() {
+            if (!currentUser) return;
+            const doc = await db.collection("users").doc(currentUser.uid).get();
+            if (doc.exists) {
+                const d = doc.data();
+                if (d.tasks) localStorage.setItem('myTasks', JSON.stringify(d.tasks));
+                if (d.todos) localStorage.setItem('myTodos', JSON.stringify(d.todos));
+                if (d.stats) localStorage.setItem('myStats', JSON.stringify(d.stats));
+                renderUI();
+                if(calendar) calendar.refetchEvents();
             }
         }
 
+        // --- アプリ機能 ---
         function addTodo() {
             const input = document.getElementById('todoInput');
             if (!input.value.trim()) return;
             const todos = getTodos();
             todos.push({ id: Date.now(), name: input.value });
-            save(getTasks(), todos, getStats());
+            saveAll(getTasks(), todos, getStats());
             input.value = "";
         }
 
         function deleteTodo(id) {
             if(confirm("このToDoを削除しますか？")) {
                 const todos = getTodos().filter(t => t.id !== id);
-                save(getTasks(), todos, getStats());
+                saveAll(getTasks(), todos, getStats());
             }
         }
 
@@ -157,7 +214,7 @@
             });
             const tasks = getTasks();
             tasks.push({ id: item.id, name: item.name, reviews: reviews });
-            save(tasks, todos.filter(t => t.id !== id), getStats());
+            saveAll(tasks, todos.filter(t => t.id !== id), getStats());
         }
 
         function completeReview(id) {
@@ -173,24 +230,14 @@
                 stats.streak = (stats.lastDate === yest.toISOString().split('T')[0]) ? stats.streak + 1 : 1;
                 stats.lastDate = todayStr;
             }
-            save(tasks, getTodos(), stats);
+            saveAll(tasks, getTodos(), stats);
         }
 
         function deleteFullTask(id) {
-            if(confirm("全スケジュールを削除しますか？")) {
+            if(confirm("全スケジュールを削除しますさ？")) {
                 const tasks = getTasks().filter(t => t.id !== id);
-                save(tasks, getTodos(), getStats());
+                saveAll(tasks, getTodos(), getStats());
             }
-        }
-
-        function generateEvents(tasks) {
-            let events = [];
-            tasks.forEach(t => {
-                t.reviews.forEach((d, i) => {
-                    events.push({ title: `${t.name} (${i+1})`, start: d, backgroundColor: '#4a90e2', borderColor: '#4a90e2', extendedProps: { taskId: t.id } });
-                });
-            });
-            return events;
         }
 
         function renderUI() {
@@ -211,7 +258,7 @@
             document.getElementById('todayReviewList').innerHTML = tasks.filter(t => t.reviews.includes(today)).map(t => `
                 <div class="task-item review-item">
                     <span>${t.name}</span>
-                    <button class="btn-done" onclick="completeReview(${t.id})">今日実施</button>
+                    <button class="btn-done" onclick="completeReview(${t.id})">完了</button>
                 </div>`).join('') || '<p style="text-align:center; color:#ccc; font-size:0.85rem;">今日の復習はありません</p>';
 
             document.getElementById('allTasksManagementList').innerHTML = tasks.map(t => `
@@ -224,26 +271,34 @@
             document.getElementById('totalDone').innerText = stats.total;
         }
 
+        // --- カレンダー初期化 ---
         document.addEventListener('DOMContentLoaded', function() {
             const calendarEl = document.getElementById('calendar');
             calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
+                initialView: 'dayGridTwoWeeks', // 指摘：初期表示を2週間に変更
                 locale: 'ja',
-                headerToolbar: { left: '', center: 'title', right: 'prev,next today' },
+                height: 'auto',
+                headerToolbar: { left: 'prev', center: 'title', right: 'next today' },
                 views: { dayGridTwoWeeks: { type: 'dayGrid', duration: { weeks: 2 } } },
-                events: generateEvents(getTasks()),
+                events: function(info, success) {
+                    const evs = getTasks().flatMap(t => t.reviews.map(d => ({ 
+                        title: t.name, start: d, backgroundColor: '#4a90e2', borderColor: 'transparent', extendedProps: { taskId: t.id } 
+                    })));
+                    success(evs);
+                },
                 eventClick: (info) => {
                     const tasks = getTasks();
                     const idx = tasks.findIndex(t => t.id === info.event.extendedProps.taskId);
                     const newName = prompt("名前編集", tasks[idx].name);
-                    if (newName) { tasks[idx].name = newName; save(tasks, getTodos(), getStats()); }
+                    if (newName) { tasks[idx].name = newName; saveAll(tasks, getTodos(), getStats()); }
                 },
                 datesSet: function() {
                     const titleEl = document.querySelector('.fc-toolbar-title');
                     if (titleEl && !titleEl.dataset.hasClick) {
                         titleEl.dataset.hasClick = "true";
                         titleEl.onclick = function() {
-                            calendar.changeView(calendar.view.type === 'dayGridMonth' ? 'dayGridTwoWeeks' : 'dayGridMonth');
+                            vIdx = (vIdx + 1) % vModes.length;
+                            calendar.changeView(vModes[vIdx]);
                         };
                     }
                 }
