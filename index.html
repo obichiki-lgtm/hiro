@@ -16,12 +16,12 @@
         /* ヘッダー・タイトル設定 */
         .fc .fc-toolbar { display: flex !important; justify-content: space-between !important; align-items: center !important; position: relative !important; margin-bottom: 20px !important; }
         .fc-toolbar-chunk:nth-child(2) { position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 100; }
-        .fc-toolbar-title { font-size: 0.8rem !important; font-weight: bold !important; padding: 6px 10px !important; border: 1px solid #ddd !important; border-radius: 8px !important; background: #fff !important; cursor: pointer !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .fc-toolbar-title { font-size: 0.8rem !important; font-weight: bold !important; padding: 6px 12px !important; border: 1px solid #ddd !important; border-radius: 8px !important; background: #fff !important; cursor: pointer !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .fc .fc-button { padding: 4px 8px !important; font-size: 0.7rem !important; background-color: #fff !important; color: #444 !important; border: 1px solid #ddd !important; }
 
-        /* カレンダー表示の微調整 */
-        .fc-daygrid-day-frame { min-height: 50px !important; }
-        .fc-col-header-cell-cushion { font-size: 0.75rem; color: #666; text-decoration: none; }
+        /* 曜日を非表示にするための設定 */
+        .fc-col-header-cell-cushion { font-size: 0.8rem; color: #666; text-decoration: none; }
+        .fc-daygrid-day-frame { min-height: 55px !important; }
 
         /* UIパーツ */
         .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
@@ -43,7 +43,7 @@
         .review-item { border-left-color: var(--primary-color); }
         .btn-done { background-color: var(--success-color); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
         
-        #calendar { margin-top: 10px; background: white; border-top: 1px solid #eee; padding-top: 10px; min-height: 300px; }
+        #calendar { margin-top: 10px; background: white; border-top: 1px solid #eee; padding-top: 10px; min-height: 320px; }
         .hint { font-size: 0.7rem; color: #999; text-align: center; margin-top: 12px; line-height: 1.5; }
     </style>
 </head>
@@ -69,7 +69,7 @@
 
         <h2>カレンダー</h2>
         <div id="calendar"></div>
-        <p class="hint">タイトルをタップ：表示切替<br>1. 2週間(カレンダー) → 2. 1週間(カレンダー) → 3. 月(カレンダー)</p>
+        <p class="hint">タイトルをタップ：表示切替<br>2週間 → 1週間 → 月 (すべてカレンダー形式)</p>
 
         <div style="margin-top: 40px; opacity: 0.6;">
             <h2>管理・削除</h2>
@@ -78,7 +78,6 @@
     </div>
 
     <script>
-        // Firebase設定
         const firebaseConfig = {
             apiKey: "AIzaSyAP51tb-FcRmc1RukwczxfxzUdOkE7yf4g",
             authDomain: "my-study-app-6a0b6.firebaseapp.com",
@@ -95,7 +94,7 @@
         let calendar;
         let viewIndex = 0;
         
-        // 修正：リスト形式を削除し、カレンダー形式3種のみに変更
+        // 修正：リスト形式を除去し、3段階のループに変更
         const viewModes = ['dayGridTwoWeeks', 'dayGridWeek', 'dayGridMonth'];
 
         auth.onAuthStateChanged(user => {
@@ -118,10 +117,30 @@
                 initialView: 'dayGridTwoWeeks',
                 locale: 'ja',
                 height: 'auto',
-                // 修正：タイトルのフォーマット（年は最初のみ）
-                titleFormat: { year: 'numeric', month: 'long', day: 'numeric' },
-                // 修正：ヘッダーの曜日を消して「12/21」形式にする
-                dayHeaderFormat: { month: 'numeric', day: 'numeric' },
+                // 修正：タイトルフォーマットの設定（年を一つにするための工夫）
+                titleFormat: function(date) {
+                    const start = date.start.marker;
+                    const end = date.end.marker;
+                    const startYear = start.getFullYear();
+                    const endYear = end.getFullYear();
+                    
+                    if (calendar.view.type === 'dayGridMonth') {
+                        return `${startYear}年 ${start.getMonth() + 1}月`;
+                    }
+                    
+                    // 2週間・1週間用：年をまたぐ場合以外は、年は最初だけ表示
+                    let startStr = `${startYear}年${start.getMonth() + 1}月${start.getDate()}日`;
+                    let endStr = `${start.getMonth() + 1 === end.getMonth() + 1 ? '' : (end.getMonth() + 1) + '月'}${end.getDate()}日`;
+                    
+                    // 終了日が翌年の場合のみ年を表示
+                    if (startYear !== endYear) {
+                        endStr = `${endYear}年${end.getMonth() + 1}月${end.getDate()}日`;
+                    }
+                    
+                    return `${startStr} – ${endStr}`;
+                },
+                // 修正：ヘッダーから曜日を消して日付のみにする
+                dayHeaderFormat: { month: 'numeric', day: 'numeric', omitCommas: true },
                 views: {
                     dayGridTwoWeeks: { 
                         type: 'dayGrid', 
@@ -149,7 +168,7 @@
             calendar.render();
         }
 
-        // --- データ管理 ---
+        // --- データ管理・同期 ---
         function getTasks() { return JSON.parse(localStorage.getItem('myTasks')) || []; }
         function getTodos() { return JSON.parse(localStorage.getItem('myTodos')) || []; }
         function getStats() { return JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 }; }
