@@ -14,16 +14,16 @@
             --bg-color: #f8fafb;
             --success-color: #2ecc71;
             --todo-color: #f39c12;
-            --danger-color: #ff4d4f; /* 削除ボタン用の赤 */
+            --danger-color: #ff4d4f; /* 削除ボタン用：赤 */
             --text-color: #333;
         }
 
-        body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
         .container { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 500px; box-sizing: border-box; }
         
-        /* ログインヘッダー */
+        /* ログインボタン */
         .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
-        #loginBtn { background: #eee; border: none; padding: 6px 14px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
+        #loginBtn { background: #f0f0f0; border: none; padding: 6px 14px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
 
         /* 統計パネル */
         .status-panel { display: flex; justify-content: space-around; background: #fff; border: 1px solid #f0f0f0; border-radius: 15px; padding: 15px; margin-bottom: 20px; }
@@ -35,11 +35,11 @@
         input[type="text"] { flex: 1; padding: 14px; border: 1px solid #e0e0e0; border-radius: 12px; font-size: 16px; outline: none; }
         .add-btn { background-color: var(--todo-color); color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: bold; cursor: pointer; }
 
-        /* セクション見出し */
+        /* 見出し */
         h2 { font-size: 1.1rem; border-left: 5px solid var(--primary-color); padding-left: 12px; margin: 30px 0 15px; color: #444; }
         .todo-header { border-left-color: var(--todo-color); }
 
-        /* リストアイテム */
+        /* タスクアイテム */
         .task-item { background: #fff; border: 1px solid #f0f0f0; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 15px; font-size: 0.95rem; }
         .todo-item { border-left: 6px solid var(--todo-color); }
         .review-item { border-left: 6px solid var(--primary-color); }
@@ -47,16 +47,18 @@
 
         .button-group { display: flex; gap: 8px; }
         .btn-done { background-color: var(--success-color); color: white; border: none; padding: 10px 18px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
+        
+        /* 削除ボタン：赤色 */
         .btn-delete { background-color: var(--danger-color); color: white; border: none; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
         
-        /* カレンダー調整 */
+        /* カレンダー */
         #calendar { margin-top: 10px; border-radius: 15px; border: 1px solid #eee; padding: 5px; background: #fff; }
         .fc .fc-toolbar { display: flex !important; justify-content: space-between !important; align-items: center !important; }
-        .fc-toolbar-chunk:nth-child(1) { flex: 1; } 
-        .fc-toolbar-chunk:nth-child(2) { flex: 2; text-align: center; } 
-        .fc-toolbar-chunk:nth-child(3) { flex: 1; display: flex; justify-content: flex-end; gap: 4px; } 
+        .fc-toolbar-chunk:nth-child(1) { flex: 1; }
+        .fc-toolbar-chunk:nth-child(2) { flex: 2; text-align: center; }
+        .fc-toolbar-chunk:nth-child(3) { flex: 1; display: flex; justify-content: flex-end; gap: 4px; }
 
-        /* 年月タイトルの青い棒を消去 */
+        /* 年月タイトル：青い棒を消去 */
         .fc-toolbar-title { 
             font-size: 1.1rem !important; 
             font-weight: bold !important; 
@@ -65,7 +67,7 @@
             border-radius: 8px;
             border: 1px solid #eee;
             background: #fff;
-            border-left: none !important; 
+            border-left: none !important;
             display: inline-block;
         }
 
@@ -83,6 +85,7 @@
 <body>
     <div class="container">
         <div class="auth-header"><button id="loginBtn" onclick="handleAuth()">☁️ ログイン</button></div>
+        
         <h1 style="font-size:1.4rem; text-align:center; color:var(--primary-color); margin: 5px 0 20px;">学習スケジューラー</h1>
         
         <div class="status-panel">
@@ -103,14 +106,14 @@
 
         <h2>カレンダー</h2>
         <div id="calendar"></div>
-        <p class="hint">年月をタップ：2週間 ↔ 月</p>
+        <p class="hint">年月をタップ：2週間 ↔ 4週間(月)</p>
 
         <h2 style="border-left-color: #ccc; color: #888;">スケジュール一括削除</h2>
         <div id="allTasksManagementList"></div>
     </div>
 
     <script>
-        // --- Firebase設定 ---
+        // --- Firebase設定 (添付ファイルより完全移植) ---
         const firebaseConfig = {
             apiKey: "AIzaSyAP51tb-FcRmc1RukwczxfxzUdOkE7yf4g",
             authDomain: "my-study-app-6a0b6.firebaseapp.com",
@@ -124,22 +127,24 @@
         const db = firebase.firestore();
         let currentUser = null;
         let calendar = null;
-        let isMonthView = false; // 表示切り替え用フラグ
+        let isMonthView = false;
 
-        // 認証管理
+        // ログイン状態監視
         auth.onAuthStateChanged(user => {
             currentUser = user;
-            const btn = document.getElementById('loginBtn');
-            btn.innerText = user ? "✅ 同期中" : "☁️ ログイン";
+            document.getElementById('loginBtn').innerText = user ? "✅ 同期中" : "☁️ ログイン";
             if (user) syncWithCloud();
         });
 
         async function handleAuth() {
-            if (currentUser) { if(confirm("ログアウトしますか？")) await auth.signOut(); }
-            else { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+            if (currentUser) {
+                if(confirm("ログアウトしますか？")) await auth.signOut();
+            } else {
+                await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+            }
         }
 
-        // --- データ管理 ---
+        // --- データロジック ---
         const getTasks = () => JSON.parse(localStorage.getItem('myTasks')) || [];
         const getTodos = () => JSON.parse(localStorage.getItem('myTodos')) || [];
         const getStats = () => JSON.parse(localStorage.getItem('myStats')) || { total: 0, streak: 0, lastDate: "" };
@@ -149,11 +154,9 @@
             localStorage.setItem('myTodos', JSON.stringify(todos));
             localStorage.setItem('myStats', JSON.stringify(stats));
             
-            // クラウド同期ロジック
             if (currentUser) {
-                db.collection("users").doc(currentUser.uid).set({ tasks, todos, stats }, { merge: true });
+                await db.collection("users").doc(currentUser.uid).set({ tasks, todos, stats }, { merge: true });
             }
-            
             renderUI();
             if (calendar) calendar.refetchEvents();
         }
@@ -171,7 +174,6 @@
             }
         }
 
-        // --- アプリ機能 ---
         function addTodo() {
             const input = document.getElementById('todoInput');
             if (!input.value.trim()) return;
@@ -218,7 +220,7 @@
         }
 
         function deleteFullTask(id) {
-            if(confirm("全スケジュールを削除しますか？")) {
+            if(confirm("スケジュールを完全に削除しますか？")) {
                 const tasks = getTasks().filter(t => t.id !== id);
                 saveAll(tasks, getTodos(), getStats());
             }
@@ -255,17 +257,18 @@
             document.getElementById('totalDone').innerText = stats.total;
         }
 
-        // --- カレンダー初期化 ---
+        // --- カレンダー設定 ---
         document.addEventListener('DOMContentLoaded', function() {
             const calendarEl = document.getElementById('calendar');
             calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridTwoWeeks', // 初期表示：2週間
                 locale: 'ja',
-                firstDay: 1, // 週の開始を月曜日に設定
+                firstDay: 1, // 月曜開始
+                initialDate: new Date(), // 今週起点
                 headerToolbar: { left: 'prev', center: 'title', right: 'next today' },
                 views: { 
                     dayGridTwoWeeks: { type: 'dayGrid', duration: { weeks: 2 } },
-                    dayGridMonth: { fixedWeekCount: false } // 必要な週だけ表示
+                    dayGridFourWeeks: { type: 'dayGrid', duration: { weeks: 4 } } // 月(4週間)表示を今週起点に
                 },
                 events: function(info, success) {
                     const evs = getTasks().flatMap(t => t.reviews.map(d => ({ 
@@ -276,8 +279,11 @@
                 eventClick: (info) => {
                     const tasks = getTasks();
                     const idx = tasks.findIndex(t => t.id === info.event.extendedProps.taskId);
-                    const newName = prompt("名前編集", tasks[idx].name);
-                    if (newName) { tasks[idx].name = newName; saveAll(tasks, getTodos(), getStats()); }
+                    const newName = prompt("タスク名の編集:", tasks[idx].name);
+                    if (newName && newName.trim() !== "") {
+                        tasks[idx].name = newName;
+                        saveAll(tasks, getTodos(), getStats());
+                    }
                 },
                 datesSet: function() {
                     const titleEl = document.querySelector('.fc-toolbar-title');
@@ -285,7 +291,7 @@
                         titleEl.dataset.hasClick = "true";
                         titleEl.onclick = function() {
                             isMonthView = !isMonthView;
-                            calendar.changeView(isMonthView ? 'dayGridMonth' : 'dayGridTwoWeeks');
+                            calendar.changeView(isMonthView ? 'dayGridFourWeeks' : 'dayGridTwoWeeks');
                         };
                     }
                 }
