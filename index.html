@@ -16,12 +16,12 @@
         /* ヘッダー・タイトル設定 */
         .fc .fc-toolbar { display: flex !important; justify-content: space-between !important; align-items: center !important; position: relative !important; margin-bottom: 20px !important; }
         .fc-toolbar-chunk:nth-child(2) { position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 100; }
-        .fc-toolbar-title { font-size: 0.9rem !important; font-weight: bold !important; padding: 6px 12px !important; border: 1px solid #ddd !important; border-radius: 8px !important; background: #fff !important; cursor: pointer !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .fc-toolbar-title { font-size: 0.8rem !important; font-weight: bold !important; padding: 6px 10px !important; border: 1px solid #ddd !important; border-radius: 8px !important; background: #fff !important; cursor: pointer !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .fc .fc-button { padding: 4px 8px !important; font-size: 0.7rem !important; background-color: #fff !important; color: #444 !important; border: 1px solid #ddd !important; }
 
-        /* カレンダー・リストの高さ調整 */
+        /* カレンダー表示の微調整 */
         .fc-daygrid-day-frame { min-height: 50px !important; }
-        .fc-list-event-title { cursor: pointer; font-size: 0.85rem; }
+        .fc-col-header-cell-cushion { font-size: 0.75rem; color: #666; text-decoration: none; }
 
         /* UIパーツ */
         .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
@@ -69,15 +69,16 @@
 
         <h2>カレンダー</h2>
         <div id="calendar"></div>
-        <p class="hint">タイトル（年月）をタップして切替：<br>2週間(カレンダー) → 1週間(カレンダー) → 今日(リスト) → 月(カレンダー)</p>
+        <p class="hint">タイトルをタップ：表示切替<br>1. 2週間(カレンダー) → 2. 1週間(カレンダー) → 3. 月(カレンダー)</p>
 
         <div style="margin-top: 40px; opacity: 0.6;">
-            <h2>全タスクの管理・削除</h2>
+            <h2>管理・削除</h2>
             <div id="allTasksList"></div>
         </div>
     </div>
 
     <script>
+        // Firebase設定
         const firebaseConfig = {
             apiKey: "AIzaSyAP51tb-FcRmc1RukwczxfxzUdOkE7yf4g",
             authDomain: "my-study-app-6a0b6.firebaseapp.com",
@@ -94,13 +95,8 @@
         let calendar;
         let viewIndex = 0;
         
-        // 【確定修正】ご指示通りの順番と形式
-        const viewModes = [
-            'dayGridTwoWeeks', // 1. 2週間（カレンダー形式）
-            'dayGridWeek',     // 2. 1週間（カレンダー形式）
-            'listDay',         // 3. 今日（リスト形式）
-            'dayGridMonth'     // 4. 月（カレンダー形式）
-        ];
+        // 修正：リスト形式を削除し、カレンダー形式3種のみに変更
+        const viewModes = ['dayGridTwoWeeks', 'dayGridWeek', 'dayGridMonth'];
 
         auth.onAuthStateChanged(user => {
             currentUser = user;
@@ -119,14 +115,21 @@
         function initCalendar() {
             const calendarEl = document.getElementById('calendar');
             calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridTwoWeeks', // 最初は2週間カレンダー
+                initialView: 'dayGridTwoWeeks',
                 locale: 'ja',
                 height: 'auto',
+                // 修正：タイトルのフォーマット（年は最初のみ）
+                titleFormat: { year: 'numeric', month: 'long', day: 'numeric' },
+                // 修正：ヘッダーの曜日を消して「12/21」形式にする
+                dayHeaderFormat: { month: 'numeric', day: 'numeric' },
                 views: {
                     dayGridTwoWeeks: { 
                         type: 'dayGrid', 
-                        duration: { weeks: 2 }, 
-                        buttonText: '2週間' 
+                        duration: { weeks: 2 }
+                    },
+                    dayGridWeek: {
+                        type: 'dayGrid',
+                        duration: { weeks: 1 }
                     }
                 },
                 headerToolbar: { left: '', center: 'title', right: 'prev,next,today' },
@@ -135,8 +138,7 @@
                 datesSet: function() {
                     const titleEl = document.querySelector('.fc-toolbar-title');
                     if (titleEl) {
-                        // 既存のイベントリスナーを解除して再設定
-                        titleEl.onclick = null; 
+                        titleEl.onclick = null;
                         titleEl.onclick = function() {
                             viewIndex = (viewIndex + 1) % viewModes.length;
                             calendar.changeView(viewModes[viewIndex]);
@@ -147,7 +149,7 @@
             calendar.render();
         }
 
-        // --- データ同期・管理ロジック ---
+        // --- データ管理 ---
         function getTasks() { return JSON.parse(localStorage.getItem('myTasks')) || []; }
         function getTodos() { return JSON.parse(localStorage.getItem('myTodos')) || []; }
         function getStats() { return JSON.parse(localStorage.getItem('myStats')) || { total: 0, lastDate: "", streak: 0 }; }
@@ -174,7 +176,6 @@
             }
         }
 
-        // --- アプリ機能ロジック ---
         function addTodo() {
             const input = document.getElementById('todoInput');
             if (!input.value) return;
