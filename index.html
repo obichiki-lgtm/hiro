@@ -16,7 +16,7 @@
             --todo-color: #f39c12;
             --danger-color: #ff4d4f;
             --text-color: #333;
-            --cal-btn-bg: #2c3e50; /* 画像のボタン色 */
+            --cal-btn-bg: #2c3e50;
         }
 
         body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
@@ -44,18 +44,15 @@
         .btn-done { background-color: var(--success-color); color: white; border: none; padding: 10px 18px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
         .btn-delete { background-color: var(--danger-color); color: white; border: none; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
         
-        /* --- カレンダー画像UI再現 --- */
-        #calendar { margin-top: 10px; border-radius: 15px; border: 1px solid #eee; padding: 10px; background: #fff; position: relative; }
-        .fc .fc-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin-bottom: 1.5em; }
+        #calendar { margin-top: 10px; border-radius: 15px; border: 1px solid #eee; padding: 10px; background: #fff; }
+        .fc .fc-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5em; }
         .fc .fc-toolbar-title { 
-            order: 2; font-size: 1rem !important; font-weight: normal !important; 
+            font-size: 1.1rem !important; font-weight: bold !important; 
             padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff;
-            cursor: pointer; min-width: 180px; text-align: center;
+            cursor: pointer; flex: 1; text-align: center;
         }
-        .fc .fc-button { background-color: var(--cal-btn-bg) !important; border: none !important; border-radius: 6px !important; opacity: 1 !important; box-shadow: none !important; }
-        .fc .fc-prev-button { order: 1; padding: 8px 12px !important; }
-        .fc .fc-next-button { order: 3; padding: 8px 12px !important; }
-        .fc .fc-today-button { order: 4; margin-left: auto !important; background-color: #7f8c8d !important; padding: 8px 16px !important; font-size: 0.9rem !important; }
+        .fc .fc-button { background-color: var(--cal-btn-bg) !important; border: none !important; border-radius: 6px !important; opacity: 1 !important; }
+        .fc .fc-today-button { background-color: #7f8c8d !important; margin-left: 5px !important; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
         .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 380px; box-sizing: border-box; }
@@ -147,6 +144,7 @@
             if (calendar) calendar.refetchEvents();
         }
 
+        // --- 連動ロジック (B-1) ---
         function rescheduleTask(task, targetDate, reviewIdx) {
             const oldDate = task.reviews[reviewIdx];
             const diff = Math.round((new Date(targetDate) - new Date(oldDate)) / 86400000);
@@ -161,6 +159,7 @@
             return task;
         }
 
+        // --- 自動持ち越し ---
         function applyAutoReschedule() {
             const todayStr = new Date().toISOString().split('T')[0];
             let tasks = getTasks(), todos = getTodos(), changed = false;
@@ -200,10 +199,12 @@
             if(confirm("このToDoを削除しますか？")) saveAll(getTasks(), getTodos().filter(t => t.id !== id), getStats());
         }
 
+        // --- ToDo完了時：今日を0日目としてサイクル生成 ---
         function completeTodo(id) {
             const todos = getTodos(), item = todos.find(t => t.id === id);
             const today = new Date().toISOString().split('T')[0];
-            const reviews = [0, 1, 4, 11, 25, 55].map(days => {
+            const cycle = [0, 1, 4, 11, 25, 55];
+            const reviews = cycle.map(days => {
                 const d = new Date(today); d.setDate(d.getDate() + days);
                 return d.toISOString().split('T')[0];
             });
@@ -232,11 +233,14 @@
                 <div class="task-item todo-item"><span>${t.name}</span>
                 <div class="button-group"><button class="btn-delete" onclick="deleteTodo(${t.id})">削除</button>
                 <button class="btn-done" onclick="completeTodo(${t.id})">完了</button></div></div>`).join('') || '<p style="text-align:center; color:#ccc;">なし</p>';
+            
+            // --- 0日目のリスト非表示の徹底 ---
             document.getElementById('todayReviewList').innerHTML = tasks.filter(t => 
                 t.reviews.includes(today) && t.startDate !== today && !t.doneDates.includes(today)
             ).map(t => `
                 <div class="task-item review-item"><span>${t.name}</span>
                 <button class="btn-done" onclick="completeReview(${t.id})">完了</button></div>`).join('') || '<p style="text-align:center; color:#ccc;">なし</p>';
+            
             document.getElementById('streakCount').innerText = stats.streak;
             document.getElementById('totalDone').innerText = stats.total;
         }
@@ -248,11 +252,14 @@
             if (!name) return;
             let tasks = getTasks();
             if (currentModalData.mode === 'new') {
-                const reviews = [0, 1, 4, 11, 25, 55].map(days => {
-                    const d = new Date(currentModalData.date); d.setDate(d.getDate() + days);
+                // --- カレンダータップ時：その日を0日目としてサイクル生成 ---
+                const baseDate = currentModalData.date;
+                const cycle = [0, 1, 4, 11, 25, 55];
+                const reviews = cycle.map(days => {
+                    const d = new Date(baseDate); d.setDate(d.getDate() + days);
                     return d.toISOString().split('T')[0];
                 });
-                tasks.push({ id: Date.now(), name, reviews, doneDates: [], startDate: currentModalData.date });
+                tasks.push({ id: Date.now(), name, reviews, doneDates: [], startDate: baseDate });
             } else {
                 let t = tasks.find(x => x.id === currentModalData.taskId);
                 t.name = name;
@@ -272,14 +279,15 @@
             calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
                 initialView: 'dayGridTwoWeeks', locale: 'ja', height: 'auto', firstDay: 1,
                 headerToolbar: { left: 'prev', center: 'title', right: 'next today' },
+                titleFormat: { year: 'numeric', month: 'long' }, // 日付表示（月）
                 views: { dayGridTwoWeeks: { type: 'dayGrid', duration: { weeks: 2 } } },
                 events: (info, success) => {
                     success(getTasks().flatMap(t => t.reviews.map((d, i) => {
                         const isDone = t.doneDates.includes(d);
                         return { 
                             title: t.name + (isDone ? " (完了)" : ""), start: d, 
-                            backgroundColor: isDone ? '#f0f0f0' : '#4a90e2', borderColor: 'transparent',
-                            textColor: isDone ? '#aaa' : '#fff', extendedProps: { taskId: t.id, idx: i }
+                            backgroundColor: isDone ? '#f2f4f7' : '#4a90e2', borderColor: 'transparent',
+                            textColor: isDone ? '#999' : '#fff', extendedProps: { taskId: t.id, idx: i }
                         };
                     })));
                 },
