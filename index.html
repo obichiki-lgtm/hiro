@@ -13,17 +13,13 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
         .container { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; box-sizing: border-box; }
         
-        /* ヘッダー・タイトル設定 */
         .fc .fc-toolbar { display: flex !important; justify-content: space-between !important; align-items: center !important; position: relative !important; margin-bottom: 20px !important; }
         .fc-toolbar-chunk:nth-child(2) { position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; z-index: 100; }
         .fc-toolbar-title { font-size: 0.9rem !important; font-weight: bold !important; padding: 6px 12px !important; border: 1px solid #ddd !important; border-radius: 8px !important; background: #fff !important; cursor: pointer !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .fc .fc-button { padding: 4px 8px !important; font-size: 0.7rem !important; background-color: #fff !important; color: #444 !important; border: 1px solid #ddd !important; }
 
-        /* カレンダー・リストの高さ調整 */
         .fc-daygrid-day-frame { min-height: 50px !important; }
-        .fc-list-event-title { cursor: pointer; font-size: 0.85rem; }
-
-        /* UIパーツ */
+        
         .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
         #loginBtn { background: #eee; border: none; padding: 5px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
         #loginBtn.logged-in { background: #e3f2fd; color: var(--primary-color); }
@@ -57,7 +53,7 @@
             <div class="status-item"><span class="status-value" id="totalDone">0</span><span class="status-label">🏆 累計完了</span></div>
         </div>
 
-        <h2>ToDoリスト (新規登録)</h2>
+        <h2>ToDoリスト</h2>
         <div class="input-area">
             <input type="text" id="todoInput" placeholder="学習内容を入力">
             <button class="add-btn" onclick="addTodo()">登録</button>
@@ -69,7 +65,7 @@
 
         <h2>カレンダー</h2>
         <div id="calendar"></div>
-        <p class="hint">タイトル（年月）をタップして切替：<br>2週間 → 1週間 → 月 (カレンダーのみ)</p>
+        <p class="hint">タイトルをタップして切替：<br>2週間 → 1週間 → 月 (表示切替)</p>
 
         <div style="margin-top: 40px; opacity: 0.6;">
             <h2>全タスクの管理・削除</h2>
@@ -94,12 +90,8 @@
         let calendar;
         let viewIndex = 0;
         
-        // 【修正】リスト形式を削除し、カレンダー形式の3種ループに固定
-        const viewModes = [
-            'dayGridTwoWeeks', 
-            'dayGridWeek',     
-            'dayGridMonth'     
-        ];
+        // 【修正】カレンダー形式のみの3段階ループに変更
+        const viewModes = ['dayGridTwoWeeks', 'dayGridWeek', 'dayGridMonth'];
 
         auth.onAuthStateChanged(user => {
             currentUser = user;
@@ -118,10 +110,10 @@
         function initCalendar() {
             const calendarEl = document.getElementById('calendar');
             calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridTwoWeeks', 
+                initialView: 'dayGridTwoWeeks',
                 locale: 'ja',
                 height: 'auto',
-                // 【修正】タイトルから重複する年を消去
+                // 【修正】タイトルの重複年を表示しない
                 titleFormat: function(info) {
                     const start = info.start.marker;
                     const end = new Date(info.end.marker);
@@ -132,22 +124,16 @@
                     const eM = end.getMonth() + 1;
                     const sD = start.getDate();
                     const eD = end.getDate();
-
                     if (calendar.view.type === 'dayGridMonth') return `${sY}年 ${sM}月`;
-                    
-                    // 同じ年なら終了側の年は表示しない
                     const endStr = (sY === eY) ? `${eM}月${eD}日` : `${eY}年${eM}月${eD}日`;
                     return `${sY}年${sM}月${sD}日 – ${endStr}`;
                 },
-                // 【修正】曜日の文字を消し「12/21」形式の日付のみにする
+                // 【修正】曜日ラベルを非表示にし日付(M/D)のみにする
                 dayHeaderContent: function(arg) {
                     return (arg.date.getMonth() + 1) + '/' + arg.date.getDate();
                 },
                 views: {
-                    dayGridTwoWeeks: { 
-                        type: 'dayGrid', 
-                        duration: { weeks: 2 }
-                    }
+                    dayGridTwoWeeks: { type: 'dayGrid', duration: { weeks: 2 } }
                 },
                 headerToolbar: { left: '', center: 'title', right: 'prev,next,today' },
                 events: getCalendarEvents(),
@@ -221,7 +207,6 @@
             const idx = tasks.findIndex(t => t.id === id);
             if (idx === -1) return;
             tasks[idx].reviews = tasks[idx].reviews.filter(d => d !== today);
-            
             let stats = getStats();
             stats.total += 1;
             if (stats.lastDate !== today) {
