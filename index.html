@@ -46,11 +46,12 @@
         .btn-delete { background-color: var(--danger-color); color: white; border: none; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
         .btn-resched { background-color: #888; color: white; border: none; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
         
+        /* カレンダータイトル整理 */
         #calendar { margin-top: 10px; border-radius: 15px; border: 1px solid #eee; padding: 5px; background: #fff; }
         .fc-toolbar-title { 
             font-size: 1.1rem !important; font-weight: bold !important; cursor: pointer; 
             padding: 6px 16px; border-radius: 8px; border: 1px solid #eee; background: #fff;
-            border-left: none !important; display: inline-block; /* 青棒消去 */
+            border-left: none !important; display: inline-block;
         }
 
         /* 編集モーダル */
@@ -63,7 +64,7 @@
             box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
         }
         .modal-content label { display: block; margin-top: 15px; font-size: 0.85rem; color: #666; }
-        .modal-content input { width: 100%; box-sizing: border-box; margin-top: 5px; }
+        .modal-content input { width: 100%; box-sizing: border-box; margin-top: 5px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
         .modal-footer { display: flex; gap: 10px; margin-top: 25px; }
         .modal-footer button { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
         .btn-cancel { background: #eee; color: #666; }
@@ -95,7 +96,7 @@
 
         <h2>カレンダー</h2>
         <div id="calendar"></div>
-        <p class="hint">年月タップ：2週 ↔ 4週 (常に今週起点)<br>予定をタップ：内容と回次以降の日程を同時編集</p>
+        <p class="hint">タイトルタップ：2週 ↔ 4週 (常に今週起点)<br>予定をタップ：タスク名と日程を同時編集</p>
 
         <h2 style="border-left-color: #ccc; color: #888;">一括削除</h2>
         <div id="allTasksManagementList"></div>
@@ -170,24 +171,19 @@
             }
         }
 
-        // --- パターンB-1：絶対移動ロジック (1つの関数で名前と連動移動を処理) ---
+        // --- 同時編集 & パターンB-1連動 ---
         function updateAndReschedule(taskId, targetDateStr, oldDateStr, reviewIdx, newName) {
             let tasks = getTasks();
             let task = tasks.find(t => t.id === taskId);
             if (!task) return;
-
-            // 名前を更新
             task.name = newName;
 
-            // 日付が変更されている場合のみスライド処理
             if (targetDateStr !== oldDateStr) {
                 const diffTime = new Date(targetDateStr) - new Date(oldDateStr);
                 const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
                 task.reviews = task.reviews.map((dateStr, idx) => {
                     if (idx >= reviewIdx) {
-                        const d = new Date(dateStr);
-                        d.setDate(d.getDate() + diffDays);
+                        const d = new Date(dateStr); d.setDate(d.getDate() + diffDays);
                         return d.toISOString().split('T')[0];
                     }
                     return dateStr;
@@ -196,7 +192,6 @@
             saveAll(tasks, getTodos(), getStats());
         }
 
-        // --- モーダル制御 ---
         function openEditModal(taskId, taskName, dateStr, reviewIdx) {
             currentEditingData = { taskId, oldDate: dateStr, reviewIdx };
             document.getElementById('editTaskName').value = taskName;
@@ -206,18 +201,11 @@
 
         function closeModal() { document.getElementById('editModal').style.display = 'none'; }
 
-        // 保存ボタンクリック時の統合アクション
         document.getElementById('saveModalBtn').onclick = () => {
             const newName = document.getElementById('editTaskName').value;
             const newDate = document.getElementById('editTaskDate').value;
             if (newName && newDate) {
-                updateAndReschedule(
-                    currentEditingData.taskId, 
-                    newDate, 
-                    currentEditingData.oldDate, 
-                    currentEditingData.reviewIdx, 
-                    newName
-                );
+                updateAndReschedule(currentEditingData.taskId, newDate, currentEditingData.oldDate, currentEditingData.reviewIdx, newName);
                 closeModal();
             }
         };
@@ -247,8 +235,7 @@
             let t = tasks.find(x => x.id === id);
             if (!t) return;
             t.reviews = t.reviews.filter(d => d !== dateStr);
-            const stats = getStats();
-            stats.total++;
+            const stats = getStats(); stats.total++;
             const today = new Date().toISOString().split('T')[0];
             if (stats.lastDate !== today) {
                 const yest = new Date(); yest.setDate(yest.getDate() - 1);
@@ -275,7 +262,7 @@
                     return `
                     <div class="task-item review-item"><span>${t.name}</span>
                     <div class="button-group">
-                        <button class="btn-resched" onclick="updateAndReschedule(${t.id}, '${new Date(Date.now() + 86400000).toISOString().split('T')[0]}', '${today}', ${idx}, '${t.name.replace(/'/g, "\\'")}')">別日</button>
+                        <button class="btn-resched" onclick="updateAndReschedule(${t.id}, '${new Date(Date.now() + 86400000).toISOString().split('T')[0]}', '${today}', ${idx}, '${t.name}')">別日</button>
                         <button class="btn-done" onclick="completeReview(${t.id}, '${today}')">完了</button>
                     </div></div>`;
                 })
@@ -286,6 +273,19 @@
 
             document.getElementById('streakCount').innerText = stats.streak;
             document.getElementById('totalDone').innerText = stats.total;
+        }
+
+        // --- 月-月 形式への書き換え関数 ---
+        function updateTitleFormat() {
+            const titleEl = document.querySelector('.fc-toolbar-title');
+            if (!titleEl) return;
+            const text = titleEl.innerText;
+            const months = text.match(/(\d+)月/g);
+            if (months && months.length >= 2) {
+                titleEl.innerText = `${months[0]} - ${months[months.length-1]}`;
+            } else if (months && months.length === 1) {
+                titleEl.innerText = months[0];
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -316,6 +316,7 @@
                     openEditModal(task.id, task.name, info.event.startStr, info.event.extendedProps.reviewIdx);
                 },
                 datesSet: () => {
+                    updateTitleFormat(); // タイトルを 月-月 に修正
                     const titleEl = document.querySelector('.fc-toolbar-title');
                     if (titleEl && !titleEl.dataset.hasClick) {
                         titleEl.dataset.hasClick = "true";
