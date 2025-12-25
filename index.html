@@ -14,27 +14,31 @@
             --bg-color: #f8fafb;
             --success-color: #2ecc71;
             --todo-color: #f39c12;
-            --danger-color: #ff4d4f; /* 削除ボタン赤 */
+            --danger-color: #ff4d4f; /* 削除ボタン：赤 */
             --text-color: #333;
         }
 
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
         .container { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 500px; box-sizing: border-box; }
         
+        /* 認証ヘッダー */
         .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
         #loginBtn { background: #f0f0f0; border: none; padding: 6px 14px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
 
+        /* 統計パネル */
         .status-panel { display: flex; justify-content: space-around; background: #fff; border: 1px solid #f0f0f0; border-radius: 15px; padding: 15px; margin-bottom: 20px; }
         .status-value { display: block; font-size: 1.8rem; font-weight: bold; color: var(--primary-color); text-align: center; }
         .status-label { font-size: 0.75rem; color: #888; text-align: center; }
 
+        /* 入力エリア */
         .input-area { display: flex; gap: 10px; margin-bottom: 20px; }
-        input[type="text"] { flex: 1; padding: 14px; border: 1px solid #e0e0e0; border-radius: 12px; font-size: 16px; outline: none; }
+        input[type="text"], input[type="date"] { flex: 1; padding: 12px; border: 1px solid #e0e0e0; border-radius: 12px; font-size: 16px; outline: none; }
         .add-btn { background-color: var(--todo-color); color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: bold; cursor: pointer; }
 
         h2 { font-size: 1.1rem; border-left: 5px solid var(--primary-color); padding-left: 12px; margin: 30px 0 15px; color: #444; }
         .todo-header { border-left-color: var(--todo-color); }
 
+        /* リストアイテム */
         .task-item { background: #fff; border: 1px solid #f0f0f0; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 15px; font-size: 0.95rem; }
         .todo-item { border-left: 6px solid var(--todo-color); }
         .review-item { border-left: 6px solid var(--primary-color); }
@@ -45,14 +49,31 @@
         .btn-delete { background-color: var(--danger-color); color: white; border: none; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
         .btn-resched { background-color: #888; color: white; border: none; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
         
+        /* カレンダー */
         #calendar { margin-top: 10px; border-radius: 15px; border: 1px solid #eee; padding: 5px; background: #fff; }
-        .fc .fc-toolbar { display: flex !important; justify-content: space-between !important; align-items: center !important; }
         .fc-toolbar-title { 
             font-size: 1.1rem !important; font-weight: bold !important; cursor: pointer; 
             padding: 6px 16px; border-radius: 8px; border: 1px solid #eee; background: #fff;
             border-left: none !important; display: inline-block;
         }
         .fc .fc-button-primary { background-color: #fff !important; color: #444 !important; border: 1px solid #ddd !important; font-size: 0.75rem !important; }
+
+        /* カスタムモーダル */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .modal-content { 
+            background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 350px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
+        }
+        .modal-content label { display: block; margin-top: 15px; font-size: 0.85rem; color: #666; }
+        .modal-content input { width: 100%; box-sizing: border-box; margin-top: 5px; }
+        .modal-footer { display: flex; gap: 10px; margin-top: 25px; }
+        .modal-footer button { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-cancel { background: #eee; color: #666; }
+        .btn-save { background: var(--primary-color); color: white; }
+
         .hint { font-size: 0.75rem; color: #aaa; text-align: center; margin-top: 12px; line-height: 1.4; }
     </style>
 </head>
@@ -79,13 +100,28 @@
 
         <h2>カレンダー</h2>
         <div id="calendar"></div>
-        <p class="hint">年月をタップ：2週間 ↔ 4週間 (常に今週から表示)<br>日付をタップ：学習を直接記録<br>予定をタップ：内容編集・その回以降を連動移動</p>
+        <p class="hint">年月タップ：2週 ↔ 4週 (常に今週起点)<br>日付をタップ：新規記録<br>予定をタップ：同時編集と連動移動</p>
 
-        <h2 style="border-left-color: #ccc; color: #888;">スケジュール一括削除</h2>
+        <h2 style="border-left-color: #ccc; color: #888;">一括削除</h2>
         <div id="allTasksManagementList"></div>
     </div>
 
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <h3 style="margin: 0 0 15px; font-size: 1.1rem;">学習内容の編集</h3>
+            <label>タスク名</label>
+            <input type="text" id="editTaskName">
+            <label>この回以降の日付</label>
+            <input type="date" id="editTaskDate">
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+                <button class="btn-save" id="saveModalBtn">保存</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // --- Firebase設定 (my-study-app-6a0b6) ---
         const firebaseConfig = {
             apiKey: "AIzaSyAP51tb-FcRmc1RukwczxfxzUdOkE7yf4g",
             authDomain: "my-study-app-6a0b6.firebaseapp.com",
@@ -100,6 +136,7 @@
         let currentUser = null;
         let calendar = null;
         let isMonthView = false;
+        let currentEditingData = null; // 編集中の情報を保持
 
         auth.onAuthStateChanged(user => {
             currentUser = user;
@@ -138,11 +175,13 @@
             }
         }
 
-        // --- パターンB：インデックス連動リスケジュール ---
-        function rescheduleTaskByIndex(taskId, targetDateStr, oldDateStr, reviewIdx) {
+        // --- 精密ロジック：インデックス連動リスケジュール ---
+        function rescheduleTaskByIndex(taskId, targetDateStr, oldDateStr, reviewIdx, newName) {
             let tasks = getTasks();
             let task = tasks.find(t => t.id === taskId);
             if (!task) return;
+
+            if (newName) task.name = newName;
 
             const diffTime = new Date(targetDateStr) - new Date(oldDateStr);
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
@@ -157,6 +196,33 @@
             });
             saveAll(tasks, getTodos(), getStats());
         }
+
+        // --- モーダル制御 ---
+        function openEditModal(taskId, taskName, dateStr, reviewIdx) {
+            currentEditingData = { taskId, oldDate: dateStr, reviewIdx };
+            document.getElementById('editTaskName').value = taskName;
+            document.getElementById('editTaskDate').value = dateStr;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        document.getElementById('saveModalBtn').onclick = () => {
+            const newName = document.getElementById('editTaskName').value;
+            const newDate = document.getElementById('editTaskDate').value;
+            if (newName && newDate) {
+                rescheduleTaskByIndex(
+                    currentEditingData.taskId, 
+                    newDate, 
+                    currentEditingData.oldDate, 
+                    currentEditingData.reviewIdx, 
+                    newName
+                );
+                closeModal();
+            }
+        };
 
         function addTodo() {
             const input = document.getElementById('todoInput');
@@ -175,9 +241,7 @@
                 const d = new Date(today); d.setDate(d.getDate() + days);
                 return d.toISOString().split('T')[0];
             });
-            const tasks = getTasks();
-            tasks.push({ id: item.id, name: item.name, reviews: reviews });
-            saveAll(tasks, todos.filter(t => t.id !== id), getStats());
+            saveAll([...getTasks(), { id: item.id, name: item.name, reviews }], todos.filter(t => t.id !== id), getStats());
         }
 
         function completeReview(id, dateStr) {
@@ -199,10 +263,9 @@
         function renderUI() {
             const today = new Date().toISOString().split('T')[0];
             const tasks = getTasks();
-            const todos = getTodos();
             const stats = getStats();
 
-            document.getElementById('todoList').innerHTML = todos.map(t => `
+            document.getElementById('todoList').innerHTML = getTodos().map(t => `
                 <div class="task-item todo-item"><span>${t.name}</span>
                 <div class="button-group">
                     <button class="btn-delete" onclick="saveAll(getTasks(), getTodos().filter(x=>x.id!==${t.id}), getStats())">削除</button>
@@ -232,10 +295,7 @@
             calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
                 initialView: 'dayGridTwoWeeks', locale: 'ja', firstDay: 1, initialDate: new Date(),
                 headerToolbar: { left: 'prev', center: 'title', right: 'next today' },
-                views: { 
-                    dayGridTwoWeeks: { type: 'dayGrid', duration: { weeks: 2 } }, 
-                    dayGridFourWeeks: { type: 'dayGrid', duration: { weeks: 4 } } 
-                },
+                views: { dayGridTwoWeeks: { type: 'dayGrid', duration: { weeks: 2 } }, dayGridFourWeeks: { type: 'dayGrid', duration: { weeks: 4 } } },
                 dateClick: (info) => {
                     const name = prompt(`${info.dateStr} の学習を記録:`);
                     if (!name) return;
@@ -243,9 +303,8 @@
                         const d = new Date(info.dateStr); d.setDate(d.getDate() + days);
                         return d.toISOString().split('T')[0];
                     });
-                    const tasks = getTasks(); const stats = getStats();
-                    tasks.push({ id: Date.now(), name: name, reviews: reviews });
-                    stats.total++; saveAll(tasks, getTodos(), stats);
+                    const stats = getStats(); stats.total++;
+                    saveAll([...getTasks(), { id: Date.now(), name, reviews }], getTodos(), stats);
                 },
                 events: (info, success) => {
                     const evs = getTasks().flatMap(t => t.reviews.map((d, idx) => ({ 
@@ -257,16 +316,7 @@
                 eventClick: (info) => {
                     const tasks = getTasks();
                     const task = tasks.find(t => t.id === info.event.extendedProps.taskId);
-                    const idx = info.event.extendedProps.reviewIdx;
-                    const oldDate = info.event.startStr;
-                    const newName = prompt("タスク名を編集:", task.name);
-                    if (newName) task.name = newName;
-                    const newDate = prompt("この回以降の日程を変更 (YYYY-MM-DD):", oldDate);
-                    if (newDate && newDate !== oldDate) {
-                        rescheduleTaskByIndex(task.id, newDate, oldDate, idx);
-                    } else if (newName) {
-                        saveAll(tasks, getTodos(), getStats());
-                    }
+                    openEditModal(task.id, task.name, info.event.startStr, info.event.extendedProps.reviewIdx);
                 },
                 datesSet: () => {
                     const titleEl = document.querySelector('.fc-toolbar-title');
