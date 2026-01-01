@@ -68,9 +68,9 @@
         .modal-btns-row { display: flex; gap: 10px; }
         .modal-footer button { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
 
-        /* 【新規追加】メモエリアのスタイル（アコーディオン対応へ拡張） */
+        /* 【新規統合】メモエリアのスタイル（アコーディオン ＋ 画像指定の色を反映） */
         .memo-header { 
-            border-left-color: #95a5a6 !important; 
+            border-left-color: #556b2f !important; /* オリーブグリーンに変更 */
             cursor: pointer; 
             display: flex; 
             justify-content: space-between; 
@@ -79,7 +79,7 @@
         .memo-area { 
             margin-top: 10px; 
             margin-bottom: 30px; 
-            display: none; /* 初期状態は非表示 */
+            display: none; 
         }
         #memoInput { 
             width: 100%; 
@@ -97,6 +97,11 @@
             color: #444;
         }
         #memoInput:focus { border-color: var(--primary-color); }
+
+        /* 【新規統合】カレンダー見出しのスタイル（画像指定の色を反映） */
+        .calendar-header {
+            border-left-color: #2c3e50 !important;
+        }
     </style>
 </head>
 <body>
@@ -112,7 +117,7 @@
         </div>
 
         <div class="input-area">
-            <input type="text" id="todoInput" placeholder="何を学びますか？">
+            <input type="text" id="todoInput" placeholder="これから学ぶ予定の内容を入力してください">
             <button class="add-btn" onclick="addTodo()">登録</button>
         </div>
 
@@ -122,14 +127,14 @@
         <div id="todayReviewList"></div>
 
         <h2 class="memo-header" onclick="toggleMemo()">
-            📝 メモ
+            メモ
             <span id="memoArrow" style="font-size: 0.8rem; color: #ccc;">▼</span>
         </h2>
         <div class="memo-area" id="memoContainer">
             <textarea id="memoInput" placeholder="学習の記録や気づきを自由に記入してください..."></textarea>
         </div>
 
-        <h2>カレンダー</h2>
+        <h2 class="calendar-header">カレンダー</h2>
         <div id="calendar"></div>
     </div>
 
