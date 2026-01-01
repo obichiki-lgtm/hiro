@@ -22,23 +22,23 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; display: flex; justify-content: center; }
         .container { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 500px; box-sizing: border-box; position: relative; }
         
-        /* 認証 & 統計パネル */
+        /* 認証 & 統計パネル（維持） */
         .auth-header { display: flex; justify-content: flex-end; margin-bottom: 5px; }
         #loginBtn { background: #eee; border: none; padding: 6px 14px; border-radius: 20px; font-size: 11px; cursor: pointer; color: #666; font-weight: bold; }
         .status-panel { display: flex; justify-content: space-around; background: #fff; border: 1px solid #f0f0f0; border-radius: 15px; padding: 15px; margin-bottom: 20px; }
         .status-value { display: block; font-size: 1.8rem; font-weight: bold; color: var(--primary-color); text-align: center; }
         .status-label { font-size: 0.75rem; color: #888; text-align: center; }
 
-        /* 入力セクション */
+        /* 入力セクション（[完了]ボタン追加に伴い入力欄を短く調整） */
         .input-area { display: flex; gap: 8px; margin-bottom: 20px; }
         input[type="text"] { flex: 1; padding: 14px; border: 1px solid #e0e0e0; border-radius: 12px; font-size: 16px; outline: none; transition: border 0.3s; min-width: 0; }
         input[type="text"]:focus { border-color: var(--primary-color); }
-        
         .add-btn { background-color: var(--todo-color); color: white; border: none; padding: 0 15px; border-radius: 12px; font-weight: bold; cursor: pointer; min-width: 60px; font-size: 0.85rem; }
-        /* 直接完了ボタン用のスタイル（物理的追記） */
+        
+        /* 物理的追加：直接完了ボタン用スタイル */
         .direct-done-btn { background-color: var(--success-color); color: white; border: none; padding: 0 15px; border-radius: 12px; font-weight: bold; cursor: pointer; min-width: 60px; font-size: 0.85rem; }
 
-        /* リストデザイン */
+        /* リストデザイン（維持） */
         h2 { font-size: 1.1rem; border-left: 5px solid var(--primary-color); padding-left: 12px; margin: 30px 0 15px; color: #444; }
         .todo-header { border-left-color: var(--todo-color); }
         .task-item { background: #fff; border: 1px solid #f0f0f0; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-radius: 15px; font-size: 0.95rem; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
@@ -48,7 +48,7 @@
         .btn-done { background-color: var(--success-color); color: white; border: none; padding: 10px 18px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
         .btn-delete { background-color: var(--danger-color); color: white; border: none; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; font-weight: bold; }
         
-        /* カレンダー設定 */
+        /* カレンダー設定（維持） */
         #calendar { margin-top: 10px; border-radius: 15px; border: 1px solid #eee; padding: 10px; background: #fff; min-height: 450px; }
         .fc .fc-toolbar { display: grid !important; grid-template-columns: auto 1fr auto auto !important; align-items: center !important; gap: 2px !important; margin-bottom: 1.5em !important; }
         .fc .fc-toolbar-chunk { display: contents !important; }
@@ -58,11 +58,11 @@
         .fc .fc-today-button { grid-column: 4 !important; background-color: #7f8c8d !important; font-size: 0.75rem !important; border-radius: 6px !important; padding: 4px 8px !important; border: none !important; }
         .fc .fc-button { background-color: var(--cal-btn-bg) !important; border: none !important; border-radius: 6px !important; height: 38px !important; }
 
-        /* 通知バナー */
+        /* 通知バナー（維持） */
         .banner { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background-color: var(--todo-color); color: white; padding: 14px 28px; border-radius: 50px; font-weight: bold; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 10000; transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .banner.active { top: 20px; }
 
-        /* モーダル */
+        /* モーダル（維持） */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
         .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 380px; box-sizing: border-box; }
         .modal-content label { display: block; margin-top: 15px; font-size: 0.8rem; color: #666; }
@@ -71,7 +71,7 @@
         .modal-btns-row { display: flex; gap: 10px; }
         .modal-footer button { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
 
-        /* メモエリア */
+        /* メモエリア（維持） */
         .memo-header { border-left-color: #556b2f !important; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .memo-area { margin-top: 10px; margin-bottom: 30px; display: none; }
         #memoInput { width: 100%; height: 180px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 15px; font-size: 0.95rem; line-height: 1.6; resize: vertical; box-sizing: border-box; outline: none; transition: border 0.3s; background: #fff; color: #444; }
@@ -134,7 +134,7 @@
     </div>
 
     <script>
-        // --- Firebase設定（完全維持） ---
+        // --- Firebase設定（完全維持：index (20).htmlより） ---
         const firebaseConfig = {
             apiKey: "AIzaSyAP51tb-FcRmc1RukwczxfxzUdOkE7yf4g",
             authDomain: "my-study-app-6a0b6.firebaseapp.com",
@@ -252,7 +252,7 @@
             return task;
         }
 
-        // --- アクション（維持および統合） ---
+        // --- アクション ---
         function addTodo() {
             const input = document.getElementById('todoInput');
             const val = input.value.trim();
@@ -271,6 +271,7 @@
             let item = todos.find(t => t.id === id);
             if (!item || item.completed) return;
 
+            // 復習サイクル生成ロジック（当日登録の実績化にも流用）
             const intervals = [0, 1, 4, 11, 25, 55];
             const reviews = intervals.map(days => addDays(today, days));
             const newTasks = [...tasks, { 
@@ -296,7 +297,7 @@
             saveAll(tasks, todos);
         }
 
-        // --- UIレンダリング（指示箇所の物理的統合） ---
+        // --- UIレンダリング（復習タスクにクリックイベントを丁寧に統合） ---
         function renderUI() {
             const today = getTodayStr();
             const tasks = getTasks();
@@ -327,7 +328,7 @@
             if (filteredReviews.length === 0) {
                 reviewContainer.innerHTML = '<p style="text-align:center; color:#ccc; font-size:0.8rem;">なし</p>';
             } else {
-                // 指示: 復習タスクのバーをタップで編集モーダルを出すように合流
+                // 指示：復習タスクのテキストクリックで編集モーダルを開く（統合）
                 reviewContainer.innerHTML = filteredReviews.map(t => {
                     const rIdx = t.reviews.indexOf(today);
                     return `
@@ -362,12 +363,10 @@
                     const d = new Date(targetDate + "T00:00:00");
                     showToast(`${d.getMonth()+1}月${d.getDate()}日のToDoに予約しました`);
                 } else if (targetDate === today) {
-                    // 指示2: 当日の登録だった時、TODOリストに追加せず実績化ロジックと合流
+                    // 指示：当日登録の場合、ToDoを作らず直接実績化ロジックへ分岐（合流）
                     const tempId = Date.now();
                     const intervals = [0, 1, 4, 11, 25, 55];
                     const reviews = intervals.map(days => addDays(today, days));
-                    
-                    // 実績として即座に生成
                     tasks.push({ 
                         id: tempId, 
                         name: name, 
@@ -375,8 +374,7 @@
                         doneDates: [today], 
                         startDate: today 
                     });
-                    
-                    // カレンダー上の見た目を「完了色」に合流させるため、完了済みToDoとしても一応保持
+                    // カレンダー上に完了状態で残すため、完了済みToDoとしても追加（合流）
                     todos.push({ id: tempId, name: name, date: today, completed: true });
                 } else {
                     // 過去：過去登録機能維持
@@ -530,7 +528,6 @@
             });
             calendar.render();
 
-            // 自動スライド処理
             const today = getTodayStr();
             let ts = getTasks();
             let td = getTodos();
@@ -589,7 +586,7 @@
         // 【物理的追加セクション】指示された新ロジックを既存を削らずに追記
         // ================================================================
 
-        // 1. 直に実績を記録できる「完了」ボタン用の新規関数
+        // 1. 直に実績を記録できる「完了」ボタン用の新規関数（統合）
         function addDirectDone() {
             const input = document.getElementById('todoInput');
             const val = input.value.trim();
@@ -599,8 +596,10 @@
             const todos = getTodos();
             const tasks = getTasks();
 
-            // 実績化ロジックを丸ごと統合（ToDoの完了化と復習サイクルの生成）
+            // ToDoリストに完了状態で追加（カレンダー表示用）
             todos.push({ id: tempId, name: val, date: today, completed: true });
+            
+            // 実績化（復習サイクル生成）ロジックを統合
             const intervals = [0, 1, 4, 11, 25, 55];
             const reviews = intervals.map(days => addDays(today, days));
             tasks.push({ 
