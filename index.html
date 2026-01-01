@@ -68,9 +68,19 @@
         .modal-btns-row { display: flex; gap: 10px; }
         .modal-footer button { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
 
-        /* 【新規追加】メモエリアのスタイル */
-        .memo-header { border-left-color: #95a5a6 !important; }
-        .memo-area { margin-top: 10px; margin-bottom: 30px; }
+        /* 【新規追加】メモエリアのスタイル（アコーディオン対応へ拡張） */
+        .memo-header { 
+            border-left-color: #95a5a6 !important; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .memo-area { 
+            margin-top: 10px; 
+            margin-bottom: 30px; 
+            display: none; /* 初期状態は非表示 */
+        }
         #memoInput { 
             width: 100%; 
             height: 180px; 
@@ -110,13 +120,17 @@
         <div id="todoList"></div>
         <h2>復習タスク</h2>
         <div id="todayReviewList"></div>
-        <h2>カレンダー</h2>
-        <div id="calendar"></div>
 
-        <h2 class="memo-header">メモ</h2>
-        <div class="memo-area">
+        <h2 class="memo-header" onclick="toggleMemo()">
+            📝 メモ
+            <span id="memoArrow" style="font-size: 0.8rem; color: #ccc;">▼</span>
+        </h2>
+        <div class="memo-area" id="memoContainer">
             <textarea id="memoInput" placeholder="学習の記録や気づきを自由に記入してください..."></textarea>
         </div>
+
+        <h2>カレンダー</h2>
+        <div id="calendar"></div>
     </div>
 
     <div class="modal-overlay" id="taskModal">
@@ -229,6 +243,19 @@
             if (calendar) calendar.refetchEvents();
         }
 
+        // --- 【新規追加】メモのアコーディオン制御ロジック ---
+        function toggleMemo() {
+            const container = document.getElementById('memoContainer');
+            const arrow = document.getElementById('memoArrow');
+            if (container.style.display === 'block') {
+                container.style.display = 'none';
+                arrow.innerText = '▼';
+            } else {
+                container.style.display = 'block';
+                arrow.innerText = '▲';
+            }
+        }
+
         // --- B-1連動スライドロジック（完全維持・削り禁止） ---
         function executeSlide(task, newTargetDate, reviewIdx) {
             const oldDate = task.reviews[reviewIdx];
@@ -322,7 +349,6 @@
                     const reviews = [0, 1, 4, 11, 25, 55].map(days => addDays(targetDate, days));
                     
                     // 「今日より前」の日程のみ自動的に実績化する（グレーアウト ＋ 統計加算）
-                    // これにより、もしサイクルの中に「今日」が含まれていれば、それは未完了のまま「青」として残る
                     const autoDoneDates = reviews.filter(d => d < today);
                     
                     tasks.push({ 
@@ -395,8 +421,6 @@
                             
                             /* 【新規追加ロジック：重複表示の抑制】
                                ToDoリストから完了した際、実績(グレー)とタスクの0回目(青またはグレー)が重なるのを防ぎます。
-                               条件：0回目の予定であり、かつ日付が開始日と一致し、かつ既に実績として存在する場合のみ
-                               描画をスキップ（return）します。
                             */
                             if (i === 0 && d === t.startDate && isDone) {
                                 return; 
