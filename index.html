@@ -690,69 +690,78 @@ const DUMMY_DOMAIN = "@my-study-app.local";
 
     </script>
     <script type="module">
-        // ▼ addCard を追加しました
-        import { getDueCards, updateCard, addCard } from './srs_module/FirestoreAdapter.js';
+    // ▼ addCard を追加で読み込みます
+    import { getDueCards, updateCard, addCard } from './srs_module/FirestoreAdapter.js';
 
-        window.addEventListener('DOMContentLoaded', () => {
-            firebase.auth().onAuthStateChanged(async (user) => {
-                if (!user) return;
+    window.addEventListener('DOMContentLoaded', () => {
+        firebase.auth().onAuthStateChanged(async (user) => {
+            // ログインしていない場合は処理中断
+            if (!user) return;
 
-                const deckId = "default_deck";
-                const container = document.getElementById("todayReviewList");
-                const widget = document.getElementById("srs-app");
-                const modal = document.getElementById("review-modal");
+            const deckId = "default_deck";
+            const container = document.getElementById("todayReviewList");
+            const widget = document.getElementById("srs-app");
+            const modal = document.getElementById("review-modal");
 
-                // ▼▼▼ 追加機能：カードが0枚なら「テスト作成ボタン」を表示 ▼▼▼
-                const cards = await getDueCards(user.uid, deckId);
-                
-                if (cards.length === 0) {
-                    container.innerHTML = `
-                        <p style="color:#666; margin-bottom:10px;">復習カードがありません</p>
-                        <button id="add-test-card" style="padding:5px 10px; background:#ddd; border:none; border-radius:4px; cursor:pointer;">
-                            🧪 テスト用カードを追加
-                        </button>
-                    `;
-                    // ボタンが押されたらカードを作ってリロード
-                    document.getElementById("add-test-card").addEventListener("click", async () => {
-                        if(confirm("テストカードを追加しますか？")) {
-                            await addCard(user.uid, deckId, "Appleの意味は？", "りんご");
-                            alert("追加しました！ページをリロードします。");
-                            location.reload();
-                        }
-                    });
-                } 
-                // ▲▲▲ 追加機能ここまで ▲▲▲
+            // 要素が見つからない場合は中断
+            if (!container ||!widget) return;
 
-                // カードがある場合の処理（既存のコードと同じ）
-                else {
-                    container.innerHTML = `
-                        <button id="start-srs-btn" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:5px; margin-bottom:10px; cursor:pointer; font-weight:bold;">
-                            💪 今日の復習を開始 (${cards.length}枚)
-                        </button>
-                    `;
-                    document.getElementById("start-srs-btn").addEventListener("click", () => {
-                        modal.style.display = "block";
-                        widget.setCards(cards);
-                    });
-                }
+            // 1. データベースからカードを取得
+            // ※ 初回はここでコンソールに「Index missing」エラーが出ることがあります（後述）
+            const cards = await getDueCards(user.uid, deckId);
 
-                //... (イベントリスナー部分はそのまま)...
-                widget.addEventListener('srs-card-answered', async (e) => {
-                    const { cardId, updates, rating, originalCard } = e.detail;
-                    const reviewLog = {
-                        rating: rating,
-                        oldInterval: originalCard.interval,
-                        newInterval: updates.interval,
-                        ease: updates.ease
-                    };
-                    await updateCard(user.uid, cardId, updates, reviewLog);
+            // 2. 表示ロジックの分岐
+            if (cards.length > 0) {
+                // A. カードがある場合：開始ボタンを表示
+                container.innerHTML = `
+                    <button id="start-srs-btn" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:5px; margin-bottom:10px; cursor:pointer; font-weight:bold;">
+                        💪 今日の復習を開始 (${cards.length}枚)
+                    </button>
+                `;
+                // ボタンクリックでモーダル表示
+                document.getElementById("start-srs-btn").addEventListener("click", () => {
+                    modal.style.display = "block";
+                    widget.setCards(cards);
                 });
+
+            } else {
+                // B. カードがない場合：テスト登録ボタンを表示（★ここが変更点）
+                container.innerHTML = `
+                    <div style="text-align:center; padding:10px; color:#666;">
+                        復習データがありません。<br>
+                        <button id="add-test-card" style="margin-top:5px; padding:5px 10px; background:#2196F3; color:white; border:none; border-radius:4px; cursor:pointer;">
+                            🧪 テストカードを追加する
+                        </button>
+                    </div>
+                `;
+                // テストカード追加処理
+                document.getElementById("add-test-card").addEventListener("click", async () => {
+                    if(confirm("テスト用のカードを追加しますか？")) {
+                        await addCard(user.uid, deckId, "Appleの意味は？", "りんご");
+                        alert("追加しました！画面をリロードします。");
+                        location.reload();
+                    }
+                });
+            }
+
+            // 3. 学習完了時の保存処理
+            widget.addEventListener('srs-card-answered', async (e) => {
+                const { cardId, updates, rating, originalCard } = e.detail;
+                const reviewLog = {
+                    rating: rating,
+                    oldInterval: originalCard.interval,
+                    newInterval: updates.interval,
+                    ease: updates.ease
+                };
+                await updateCard(user.uid, cardId, updates, reviewLog);
             });
         });
-    </script>
+    });
+</script>
 </body> </html>
 </body>
 </html>
+
 
 
 
