@@ -138,8 +138,8 @@
             <input type="password" id="authPassword" placeholder="******" style="width:100%; margin-top:5px; padding:12px; border:1px solid #ddd; border-radius:8px; box-sizing:border-box;">
             
             <div class="modal-footer">
-                <button style="background:var(--primary-color); color:white;" onclick="processAuth('register')">このIDでデータを保存 (新規/紐付)</button>
-                <button style="background:#2c3e50; color:white;" onclick="processAuth('login')">既存IDでログイン (復元)</button>
+                <button style="background:var(--primary-color); color:white;" onclick="processAuth('register')">このIDでデータを保存 </button>
+                <button style="background:#2c3e50; color:white;" onclick="processAuth('login')">既存IDでログイン</button>
                 <button style="background:#eee;" onclick="closeAuthModal()">閉じる</button>
             </div>
         </div>
@@ -689,7 +689,66 @@ const DUMMY_DOMAIN = "@my-study-app.local";
         }
 
     </script>
+    <script type="module">
+        // 必要な機能を部品フォルダから読み込み
+        import { getDueCards, updateCard } from './srs_module/FirestoreAdapter.js';
+
+        // 画面の準備ができたら実行
+        window.addEventListener('DOMContentLoaded', () => {
+            
+            // Firebaseのログイン状態を監視（ログインしたら復習データを取得）
+            firebase.auth().onAuthStateChanged(async (user) => {
+                if (!user) return; // ログインしていなければ何もしない
+
+                const deckId = "default_deck"; // 必要に応じてデッキ名を変更可能
+                const container = document.getElementById("todayReviewList");
+                const widget = document.getElementById("srs-app");
+                const modal = document.getElementById("review-modal");
+
+                if (!container ||!widget) return;
+
+                // 1. データベースから「今日やるべきカード」を取得
+                const cards = await getDueCards(user.uid, deckId);
+
+                // 2. カードがある場合のみ「開始ボタン」を表示
+                if (cards.length > 0) {
+                    container.innerHTML = `
+                        <button id="start-srs-btn" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:5px; margin-bottom:10px; cursor:pointer; font-weight:bold;">
+                            💪 今日の復習を開始 (${cards.length}枚)
+                        </button>
+                    `;
+
+                    // ボタンが押されたらモーダルを開いて学習開始
+                    document.getElementById("start-srs-btn").addEventListener("click", () => {
+                        modal.style.display = "block"; // 隠していたモーダルを表示
+                        widget.setCards(cards);        // カードデータを渡す
+                    });
+                } else {
+                    container.innerHTML = `<div style="color:#aaa; font-size:0.9rem; padding:5px;">今日の復習タスクはありません 🎉</div>`;
+                }
+
+                // 3. ウィジェットからの「回答したよ」イベントを受け取って保存
+                widget.addEventListener('srs-card-answered', async (e) => {
+                    const { cardId, updates, rating, originalCard } = e.detail;
+                    
+                    // 分析用のログデータを作成
+                    const reviewLog = {
+                        rating: rating,
+                        oldInterval: originalCard.interval,
+                        newInterval: updates.interval,
+                        ease: updates.ease
+                    };
+
+                    // データベースに保存
+                    await updateCard(user.uid, cardId, updates, reviewLog);
+                    console.log("学習記録を保存しました:", cardId);
+                });
+            });
+        });
+    </script>
+</body> </html>
 </body>
 </html>
+
 
 
