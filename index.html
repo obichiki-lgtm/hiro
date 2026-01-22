@@ -90,11 +90,13 @@
 
         <h2 class="todo-header">ToDoリスト</h2>
         <div id="todoList"></div>
-        <h2>復習タスク</h2>
-        <div id="todayReviewList"></div>
-
-        <h2 class="memo-header" onclick="toggleMemo()">
-            メモ
+       <h2>復習タスク</h2>
+    <div id="todayReviewList"></div> <div id="review-modal" style="display:none; margin-top: 10px; border: 1px solid #ccc; padding: 10px; background: #fff;">
+         <srs-widget id="srs-app"></srs-widget>
+    </div>
+    <script type="module" src="./srs_module/SRSWidget.js"></script>
+    <h2 class="memo-header" onclick="toggleMemo()">
+        メモ
             <span id="memoArrow" style="font-size: 0.8rem; color: #ccc;">▼</span>
         </h2>
         <div class="memo-area" id="memoContainer">
@@ -689,4 +691,5 @@ const DUMMY_DOMAIN = "@my-study-app.local";
     </script>
 </body>
 </html>
+
 
